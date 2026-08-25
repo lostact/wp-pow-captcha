@@ -1,0 +1,67 @@
+.pow-captcha {
+    margin: 12px 0;
+    padding: 12px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    background: #f6f7f7;
+}
+
+.pow-progress {
+    position: relative;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #dcdcde;
+}
+
+.pow-progress span {
+    position: absolute;
+    inset: 0 auto 0 -35%;
+    width: 35%;
+    border-radius: inherit;
+    background: #2271b1;
+    animation: pow-progress 1.15s ease-in-out infinite;
+}
+
+.pow-status,
+.pow-details {
+    margin: 8px 0 0;
+}
+
+.pow-status {
+    color: #1d2327;
+    font-weight: 600;
+}
+
+.pow-details {
+    color: #646970;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+[data-pow-state="solved"] .pow-progress span {
+    inset: 0;
+    width: 100%;
+    background: #00a32a;
+    animation: none;
+}
+
+[data-pow-state="error"] .pow-progress span {
+    inset: 0;
+    width: 100%;
+    background: #d63638;
+    animation: none;
+}
+
+@keyframes pow-progress {
+    0% { left: -35%; }
+    100% { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pow-progress span {
+        left: 0;
+        width: 45%;
+        animation: none;
+    }
+}

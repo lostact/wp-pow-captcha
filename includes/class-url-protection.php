@@ -69,21 +69,30 @@ class PoW_Captcha_URL_Protection {
         // Check for solution cookie.
         if ( isset( $_COOKIE['pow_solution'] ) ) {
             $cookie_value = sanitize_text_field( wp_unslash( $_COOKIE['pow_solution'] ) );
-            $parts        = explode( ':', $cookie_value, 5 );
+            $parts        = explode( ':', $cookie_value );
 
             // Delete the pow_solution cookie immediately regardless of outcome.
             setcookie( 'pow_solution', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN );
 
-            if ( count( $parts ) === 5 ) {
+            if ( 5 === count( $parts ) || 7 === count( $parts ) ) {
                 $challenge  = sanitize_text_field( $parts[0] );
                 $expires    = (int) $parts[1];
                 $difficulty = (int) $parts[2];
-                $sig        = sanitize_text_field( $parts[3] );
-                $solution   = $parts[4];
 
-                // Validate solution with ctype_digit before passing to verify.
+                if ( 7 === count( $parts ) ) {
+                    $version   = (int) $parts[3];
+                    $algorithm = sanitize_text_field( $parts[4] );
+                    $sig       = sanitize_text_field( $parts[5] );
+                    $solution  = $parts[6];
+                } else {
+                    $version   = 1;
+                    $algorithm = 'sha256';
+                    $sig       = sanitize_text_field( $parts[3] );
+                    $solution  = $parts[4];
+                }
+
                 if ( ctype_digit( $solution ) ) {
-                    if ( $this->challenge->verify( $challenge, $expires, $difficulty, $sig, $solution ) ) {
+                    if ( $this->challenge->verify( $challenge, $expires, $difficulty, $sig, $solution, $version, $algorithm ) ) {
                         // Verification passed — issue cleared cookie.
                         $nonce         = bin2hex( random_bytes( 8 ) );
                         $cleared_hmac  = hash_hmac( 'sha256', $nonce . ':cleared', $secret_key );
@@ -119,8 +128,8 @@ class PoW_Captcha_URL_Protection {
      * @param bool $error Whether the previous solution failed.
      */
     private function show_challenge( bool $error ) {
-        $difficulty = (int) get_option( 'pow_url_difficulty', 4 );
-        $difficulty = max( 1, min( 8, $difficulty ) );
+        $difficulty = (int) get_option( 'pow_url_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
+        $difficulty = PoW_Captcha_Challenge::clamp_difficulty( $difficulty );
         $challenge  = $this->challenge->generate( $difficulty );
 
         $is_secure = is_ssl();

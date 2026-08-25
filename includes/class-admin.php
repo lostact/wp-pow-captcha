@@ -15,6 +15,7 @@ class PoW_Captcha_Admin {
     public function __construct() {
         add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
         add_action( 'wp_ajax_pow_reset_secret_key', array( $this, 'ajax_reset_secret_key' ) );
     }
 
@@ -125,6 +126,14 @@ class PoW_Captcha_Admin {
             'pow_general_section'
         );
 
+        // Section: Benchmark and calculator.
+        add_settings_section(
+            'pow_benchmark_section',
+            __( 'Proof-of-Work Benchmark', 'wp-pow-captcha' ),
+            array( $this, 'render_benchmark_section' ),
+            'pow-captcha'
+        );
+
         // Section: Security Info.
         add_settings_section(
             'pow_security_section',
@@ -185,14 +194,14 @@ class PoW_Captcha_Admin {
     }
 
     /**
-     * Sanitize difficulty value (1–8 inclusive).
+     * Sanitize fine-grained difficulty value (0–140 inclusive).
      *
      * @param mixed $input The input value.
      * @return int Clamped difficulty.
      */
     public function sanitize_difficulty( $input ): int {
         $value = absint( $input );
-        return max( 1, min( 8, $value ) );
+        return max( PoW_Captcha_Challenge::MIN_DIFFICULTY, min( PoW_Captcha_Challenge::MAX_DIFFICULTY, $value ) );
     }
 
     /**
@@ -262,12 +271,8 @@ class PoW_Captcha_Admin {
      * Render the form difficulty field.
      */
     public function render_form_difficulty_field() {
-        $value = (int) get_option( 'pow_form_difficulty', 4 );
-        printf(
-            '<input type="number" name="pow_form_difficulty" value="%d" min="1" max="8" step="1" class="small-text">',
-            esc_attr( $value )
-        );
-        echo '<p class="description">' . esc_html__( 'Number of leading zero hex characters required (1–8). Difficulty 4 ≈ 65,000 attempts; difficulty 6 ≈ 16 million attempts.', 'wp-pow-captcha' ) . '</p>';
+        $value = (int) get_option( 'pow_form_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
+        $this->render_difficulty_control( 'pow_form_difficulty', $value );
     }
 
     /**
@@ -300,12 +305,49 @@ class PoW_Captcha_Admin {
      * Render the URL difficulty field.
      */
     public function render_url_difficulty_field() {
-        $value = (int) get_option( 'pow_url_difficulty', 4 );
+        $value = (int) get_option( 'pow_url_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
+        $this->render_difficulty_control( 'pow_url_difficulty', $value );
+    }
+
+    /** Render a synchronized slider/number difficulty control. */
+    private function render_difficulty_control( string $name, int $value ) {
+        $value = PoW_Captcha_Challenge::clamp_difficulty( $value );
         printf(
-            '<input type="number" name="pow_url_difficulty" value="%d" min="1" max="8" step="1" class="small-text">',
-            esc_attr( $value )
+            '<div class="pow-difficulty-control" data-pow-difficulty-control><input type="range" value="%1$d" min="0" max="140" step="1" aria-label="%2$s"><input type="number" name="%3$s" value="%1$d" min="0" max="140" step="1" class="small-text" aria-label="%2$s"><strong class="pow-work-preview"></strong></div>',
+            esc_attr( $value ),
+            esc_attr__( 'Proof-of-work difficulty', 'wp-pow-captcha' ),
+            esc_attr( $name )
         );
-        echo '<p class="description">' . esc_html__( 'Number of leading zero hex characters required (1–8). Difficulty 4 ≈ 65,000 attempts; difficulty 6 ≈ 16 million attempts.', 'wp-pow-captcha' ) . '</p>';
+        echo '<p class="description">' . esc_html__( 'Each step adds about 7.2% expected work. Difficulty 60 averages 65,536 attempts; use the benchmark below to estimate visitor wait times.', 'wp-pow-captcha' ) . '</p>';
+    }
+
+    /** Render the interactive benchmark and processor estimate workspace. */
+    public function render_benchmark_section() {
+        ?>
+        <p><?php esc_html_e( 'Measure the same JavaScript SHA-256 worker used by visitors, then test real solves. Results stay in this browser.', 'wp-pow-captcha' ); ?></p>
+        <div id="pow-benchmark" class="pow-benchmark-card" data-worker-url="<?php echo esc_url( add_query_arg( 'ver', '2.0.0', plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ) ); ?>">
+            <div class="pow-benchmark-actions">
+                <button type="button" class="button button-primary" id="pow-run-benchmark"><?php esc_html_e( 'Benchmark This Device', 'wp-pow-captcha' ); ?></button>
+                <label for="pow-test-difficulty"><?php esc_html_e( 'Test difficulty', 'wp-pow-captcha' ); ?></label>
+                <input type="number" id="pow-test-difficulty" value="60" min="0" max="140" step="1" class="small-text">
+                <label for="pow-test-runs"><?php esc_html_e( 'Runs', 'wp-pow-captcha' ); ?></label>
+                <input type="number" id="pow-test-runs" value="3" min="1" max="10" step="1" class="small-text">
+                <button type="button" class="button" id="pow-run-solves"><?php esc_html_e( 'Run Solve Test', 'wp-pow-captcha' ); ?></button>
+                <button type="button" class="button" id="pow-cancel-test" disabled><?php esc_html_e( 'Cancel', 'wp-pow-captcha' ); ?></button>
+            </div>
+            <div class="pow-admin-progress" aria-hidden="true"><span></span></div>
+            <p id="pow-benchmark-status" role="status" aria-live="polite"><?php esc_html_e( 'No benchmark has been run in this browser yet.', 'wp-pow-captcha' ); ?></p>
+            <div id="pow-solve-results"></div>
+            <h3><?php esc_html_e( 'Estimated Solve Times by Processor Profile', 'wp-pow-captcha' ); ?></h3>
+            <p class="description"><?php esc_html_e( 'Profiles are JavaScript hash-rate references, not guarantees. Browser, power mode, temperature, and device load affect actual performance.', 'wp-pow-captcha' ); ?></p>
+            <div class="pow-table-scroll">
+                <table class="widefat striped" id="pow-estimate-table">
+                    <thead><tr><th><?php esc_html_e( 'Processor profile', 'wp-pow-captcha' ); ?></th><th><?php esc_html_e( 'Hash rate', 'wp-pow-captcha' ); ?></th><th><?php esc_html_e( 'Expected hashes', 'wp-pow-captcha' ); ?></th><th><?php esc_html_e( 'Median', 'wp-pow-captcha' ); ?></th><th><?php esc_html_e( 'Expected', 'wp-pow-captcha' ); ?></th><th><?php esc_html_e( '95th percentile', 'wp-pow-captcha' ); ?></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <?php
     }
 
     /**
@@ -354,6 +396,17 @@ class PoW_Captcha_Admin {
         });
         </script>
         <?php
+    }
+
+    /** Load admin benchmark assets only on this settings screen. */
+    public function enqueue_admin_assets( string $hook_suffix ) {
+        if ( 'settings_page_pow-captcha' !== $hook_suffix ) {
+            return;
+        }
+
+        $plugin_url = plugin_dir_url( dirname( __FILE__ ) );
+        wp_enqueue_style( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.css', array(), '2.0.0' );
+        wp_enqueue_script( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.js', array(), '2.0.0', true );
     }
 
     /**

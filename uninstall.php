@@ -14,3 +14,5 @@ delete_option( 'pow_protected_forms' );
 delete_option( 'pow_url_patterns' );
 delete_option( 'pow_form_difficulty' );
 delete_option( 'pow_url_difficulty' );
+delete_option( 'pow_expiry_time' );
+delete_option( 'pow_difficulty_schema' );

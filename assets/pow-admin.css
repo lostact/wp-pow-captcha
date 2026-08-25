@@ -1,0 +1,116 @@
+.pow-difficulty-control {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-width: 760px;
+}
+
+.pow-difficulty-control input[type="range"] {
+    width: min(420px, 70vw);
+}
+
+.pow-work-preview {
+    color: #1d2327;
+    font-variant-numeric: tabular-nums;
+}
+
+.pow-benchmark-card {
+    max-width: 1050px;
+    padding: 18px;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.pow-benchmark-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pow-benchmark-actions label {
+    margin-left: 8px;
+    font-weight: 600;
+}
+
+.pow-admin-progress {
+    position: relative;
+    height: 6px;
+    margin: 16px 0 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #dcdcde;
+}
+
+.pow-admin-progress span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    border-radius: inherit;
+    background: #2271b1;
+}
+
+.pow-benchmark-card[data-busy="true"] .pow-admin-progress span {
+    width: 35%;
+    animation: pow-admin-progress 1.15s ease-in-out infinite;
+}
+
+#pow-benchmark-status {
+    min-height: 1.5em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+#pow-solve-results {
+    max-width: 620px;
+    margin: 14px 0 24px;
+}
+
+.pow-table-scroll {
+    overflow-x: auto;
+}
+
+#pow-estimate-table {
+    min-width: 760px;
+    font-variant-numeric: tabular-nums;
+}
+
+#pow-estimate-table .pow-measured-row td {
+    color: #135e96;
+    font-weight: 600;
+}
+
+@keyframes pow-admin-progress {
+    from { left: -35%; }
+    to { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pow-benchmark-card[data-busy="true"] .pow-admin-progress span {
+        left: 0;
+        width: 45%;
+        animation: none;
+    }
+}
+
+@media (max-width: 782px) {
+    .pow-difficulty-control {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pow-difficulty-control input[type="range"] {
+        width: 100%;
+    }
+
+    .pow-benchmark-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pow-benchmark-actions label {
+        margin: 4px 0 0;
+    }
+}

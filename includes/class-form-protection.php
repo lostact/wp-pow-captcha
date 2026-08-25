@@ -57,16 +57,23 @@ class PoW_Captcha_Form_Protection {
     public function enqueue_assets() {
         $plugin_url = plugin_dir_url( dirname( __FILE__ ) );
 
+        wp_enqueue_style(
+            'pow-captcha',
+            $plugin_url . 'assets/pow-captcha.css',
+            array(),
+            '2.0.0'
+        );
+
         wp_enqueue_script(
             'pow-solver',
             $plugin_url . 'assets/pow-solver.js',
             array(),
-            '1.0.0',
+            '2.0.0',
             true
         );
 
         wp_localize_script( 'pow-solver', 'powConfig', array(
-            'workerUrl' => $plugin_url . 'assets/pow-worker.js',
+            'workerUrl' => add_query_arg( 'ver', '2.0.0', $plugin_url . 'assets/pow-worker.js' ),
         ) );
     }
 
@@ -74,21 +81,28 @@ class PoW_Captcha_Form_Protection {
      * Inject hidden PoW challenge fields into a form.
      */
     public function inject_hidden_fields() {
-        $difficulty     = (int) get_option( 'pow_form_difficulty', 4 );
-        $difficulty     = max( 1, min( 8, $difficulty ) );
+        $difficulty     = (int) get_option( 'pow_form_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
+        $difficulty     = PoW_Captcha_Challenge::clamp_difficulty( $difficulty );
         $challenge_data = $this->challenge->generate( $difficulty );
         ?>
         <div class="pow-captcha"
+             data-pow-state="solving"
              data-challenge="<?php echo esc_attr( $challenge_data['challenge'] ); ?>"
              data-expires="<?php echo esc_attr( $challenge_data['expires'] ); ?>"
              data-difficulty="<?php echo esc_attr( $challenge_data['difficulty'] ); ?>"
+             data-version="<?php echo esc_attr( $challenge_data['version'] ); ?>"
+             data-algorithm="<?php echo esc_attr( $challenge_data['algorithm'] ); ?>"
              data-sig="<?php echo esc_attr( $challenge_data['signature'] ); ?>">
             <input type="hidden" name="_pow_challenge" value="<?php echo esc_attr( $challenge_data['challenge'] ); ?>">
             <input type="hidden" name="_pow_expires" value="<?php echo esc_attr( $challenge_data['expires'] ); ?>">
             <input type="hidden" name="_pow_difficulty" value="<?php echo esc_attr( $challenge_data['difficulty'] ); ?>">
+            <input type="hidden" name="_pow_version" value="<?php echo esc_attr( $challenge_data['version'] ); ?>">
+            <input type="hidden" name="_pow_algorithm" value="<?php echo esc_attr( $challenge_data['algorithm'] ); ?>">
             <input type="hidden" name="_pow_sig" value="<?php echo esc_attr( $challenge_data['signature'] ); ?>">
-            <input type="hidden" name="_pow_solution" id="pow_solution_field" value="">
-            <p class="pow-status">Running security check…</p>
+            <input type="hidden" name="_pow_solution" value="">
+            <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'wp-pow-captcha' ); ?>" aria-busy="true"><span></span></div>
+            <p class="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Running security check…', 'wp-pow-captcha' ); ?></p>
+            <p class="pow-details"><?php esc_html_e( 'Starting secure worker…', 'wp-pow-captcha' ); ?></p>
         </div>
         <?php
     }
@@ -106,6 +120,10 @@ class PoW_Captcha_Form_Protection {
         $challenge  = sanitize_text_field( wp_unslash( $_POST['_pow_challenge'] ) );
         $expires    = (int) $_POST['_pow_expires'];
         $difficulty = (int) $_POST['_pow_difficulty'];
+        $version    = isset( $_POST['_pow_version'] ) ? (int) $_POST['_pow_version'] : 1;
+        $algorithm  = isset( $_POST['_pow_algorithm'] )
+            ? sanitize_text_field( wp_unslash( $_POST['_pow_algorithm'] ) )
+            : 'sha256';
         $sig        = sanitize_text_field( wp_unslash( $_POST['_pow_sig'] ) );
         $solution   = sanitize_text_field( wp_unslash( $_POST['_pow_solution'] ) );
 
@@ -113,7 +131,7 @@ class PoW_Captcha_Form_Protection {
             return false;
         }
 
-        return $this->challenge->verify( $challenge, $expires, $difficulty, $sig, $solution );
+        return $this->challenge->verify( $challenge, $expires, $difficulty, $sig, $solution, $version, $algorithm );
     }
 
     /**

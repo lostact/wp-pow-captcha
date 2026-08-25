@@ -9,29 +9,151 @@
  * difficulty levels feasible. Constants are from NIST FIPS 180-4.
  */
 
+var FRACTION_THRESHOLDS = [256, 239, 223, 208, 194, 181, 169, 158, 147, 137];
+
 self.onmessage = function (e) {
-    var challenge  = e.data.challenge;
-    var difficulty = e.data.difficulty;
-    var prefix     = '0'.repeat(difficulty);
-    var counter    = 0;
-    var yieldEvery = 10000; // Yield to event loop every N iterations.
+    var data = e.data || {};
+
+    if (data.action === 'benchmark') {
+        runBenchmark(data.duration || 1500);
+        return;
+    }
+
+    runSolve(data.challenge, Number(data.difficulty), data.startCounter || 0, Number(data.version || 1));
+};
+
+/** Solve a challenge and periodically report real progress. */
+function runSolve(challenge, difficulty, startCounter, version) {
+    var validDifficulty = version === 1
+        ? difficulty >= 1 && difficulty <= 8
+        : difficulty >= 0 && difficulty <= 140;
+
+    if (typeof challenge !== 'string' || !validDifficulty) {
+        self.postMessage({ type: 'error', message: 'Invalid proof-of-work parameters.' });
+        return;
+    }
+
+    var counter = Number(startCounter) || 0;
+    var started = performance.now();
+    var lastProgress = started;
+    var yieldEvery = 2000;
 
     function tick() {
         var limit = counter + yieldEvery;
         while (counter < limit) {
             var hex = sha256(challenge + counter);
-            if (hex.startsWith(prefix)) {
-                self.postMessage(counter.toString());
+            if (version === 1 ? meetsLegacyDifficulty(hex, difficulty) : meetsDifficulty(hex, difficulty)) {
+                var elapsed = performance.now() - started;
+                self.postMessage({
+                    type: 'solution',
+                    solution: counter.toString(),
+                    attempts: counter - startCounter + 1,
+                    elapsed: elapsed
+                });
                 return;
             }
             counter++;
         }
-        // Yield to the event loop to keep the worker responsive.
+
+        var now = performance.now();
+        if (now - lastProgress >= 100) {
+            self.postMessage({
+                type: 'progress',
+                attempts: counter - startCounter,
+                elapsed: now - started
+            });
+            lastProgress = now;
+        }
+
         setTimeout(tick, 0);
     }
 
     tick();
-};
+}
+
+/** Measure this browser's hashing throughput over a fixed interval. */
+function runBenchmark(duration) {
+    duration = Math.max(500, Math.min(10000, Number(duration) || 1500));
+    var challenge = '0123456789abcdef0123456789abcdef';
+    var counter = 0;
+    var started = performance.now();
+    var lastProgress = started;
+
+    function tick() {
+        var limit = counter + 2000;
+        while (counter < limit) {
+            sha256(challenge + counter);
+            counter++;
+        }
+
+        var now = performance.now();
+        var elapsed = now - started;
+        if (now - lastProgress >= 100) {
+            self.postMessage({ type: 'benchmark-progress', attempts: counter, elapsed: elapsed });
+            lastProgress = now;
+        }
+
+        if (elapsed >= duration) {
+            self.postMessage({
+                type: 'benchmark-result',
+                attempts: counter,
+                elapsed: elapsed,
+                hashRate: counter / (elapsed / 1000)
+            });
+            return;
+        }
+
+        setTimeout(tick, 0);
+    }
+
+    tick();
+}
+
+/** Match the legacy leading-hex-zero target during the migration window. */
+function meetsLegacyDifficulty(hex, difficulty) {
+    return hex.substr(0, difficulty) === '0'.repeat(difficulty);
+}
+
+/** Match PHP's whole-bit plus fractional-tenth-bit target. */
+function meetsDifficulty(hex, difficulty) {
+    var wholeBits = 10 + Math.floor(difficulty / 10);
+    var fraction = difficulty % 10;
+    var fullBytes = Math.floor(wholeBits / 8);
+    var remaining = wholeBits % 8;
+    var bytes = [];
+    var neededBytes = fullBytes + (remaining || fraction ? 2 : 0);
+
+    for (var i = 0; i < neededBytes; i++) {
+        bytes.push(parseInt(hex.substr(i * 2, 2), 16));
+    }
+
+    for (var j = 0; j < fullBytes; j++) {
+        if (bytes[j] !== 0) {
+            return false;
+        }
+    }
+
+    var bitOffset = fullBytes * 8;
+    if (remaining > 0) {
+        var mask = (0xff << (8 - remaining)) & 0xff;
+        if ((bytes[fullBytes] & mask) !== 0) {
+            return false;
+        }
+        bitOffset += remaining;
+    }
+
+    if (fraction === 0) {
+        return true;
+    }
+
+    var byteIndex = Math.floor(bitOffset / 8);
+    var shift = bitOffset % 8;
+    var nextByte = shift === 0
+        ? bytes[byteIndex]
+        : (((bytes[byteIndex] << shift) & 0xff) | (bytes[byteIndex + 1] >> (8 - shift)));
+
+    return nextByte < FRACTION_THRESHOLDS[fraction];
+}
 
 /**
  * Synchronous SHA-256 implementation.

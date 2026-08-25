@@ -64,6 +64,51 @@ if ( ! defined( 'ABSPATH' ) ) {
             color: #50575e;
             margin-top: 16px;
             line-height: 1.5;
+            font-weight: 600;
+        }
+        #pow-details {
+            min-height: 1.5em;
+            margin-top: 6px;
+            color: #646970;
+            font-size: 0.8em;
+            font-variant-numeric: tabular-nums;
+        }
+        .pow-progress {
+            position: relative;
+            height: 8px;
+            margin-top: 22px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #dcdcde;
+        }
+        .pow-progress span {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: -35%;
+            width: 35%;
+            border-radius: inherit;
+            background: #2271b1;
+            animation: pow-progress 1.15s ease-in-out infinite;
+        }
+        [data-pow-state="solved"] .pow-progress span {
+            left: 0;
+            width: 100%;
+            background: #00a32a;
+            animation: none;
+        }
+        [data-pow-state="error"] .pow-progress span {
+            left: 0;
+            width: 100%;
+            background: #d63638;
+            animation: none;
+        }
+        @keyframes pow-progress {
+            from { left: -35%; }
+            to { left: 100%; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .pow-progress span { left: 0; width: 45%; animation: none; }
         }
         .pow-error {
             background: #fcf0f1;
@@ -77,7 +122,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     </style>
 </head>
 <body>
-    <div class="pow-container">
+    <div class="pow-container" data-pow-state="solving">
         <div class="pow-icon">🔒</div>
         <div class="site-name"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></div>
         <h1>Checking your browser…</h1>
@@ -88,16 +133,20 @@ if ( ! defined( 'ABSPATH' ) ) {
             </div>
         <?php endif; ?>
 
-        <p id="pow-status">Please wait while we verify your browser…</p>
+        <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'wp-pow-captcha' ); ?>" aria-busy="true"><span></span></div>
+        <p id="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Please wait while we verify your browser…', 'wp-pow-captcha' ); ?></p>
+        <p id="pow-details"><?php esc_html_e( 'Starting secure worker…', 'wp-pow-captcha' ); ?></p>
     </div>
 
     <script>
-        const powChallenge  = <?php echo json_encode( $challenge['challenge'] ); ?>;
-        const powExpires    = <?php echo intval( $challenge['expires'] ); ?>;
-        const powDifficulty = <?php echo intval( $challenge['difficulty'] ); ?>;
-        const powSig        = <?php echo json_encode( $challenge['signature'] ); ?>;
-        const powWorkerUrl  = <?php echo json_encode( plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ); ?>;
+        window.powChallenge  = <?php echo wp_json_encode( $challenge['challenge'] ); ?>;
+        window.powExpires    = <?php echo intval( $challenge['expires'] ); ?>;
+        window.powDifficulty = <?php echo intval( $challenge['difficulty'] ); ?>;
+        window.powVersion    = <?php echo intval( $challenge['version'] ); ?>;
+        window.powAlgorithm  = <?php echo wp_json_encode( $challenge['algorithm'] ); ?>;
+        window.powSig        = <?php echo wp_json_encode( $challenge['signature'] ); ?>;
+        window.powWorkerUrl  = <?php echo wp_json_encode( add_query_arg( 'ver', '2.0.0', plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ) ); ?>;
     </script>
-    <script src="<?php echo esc_url( plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-solver.js' ); ?>"></script>
+    <script src="<?php echo esc_url( add_query_arg( 'ver', '2.0.0', plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-solver.js' ) ); ?>"></script>
 </body>
 </html>
