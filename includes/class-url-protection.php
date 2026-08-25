@@ -145,6 +145,9 @@ class PoW_Captcha_URL_Protection {
 
         $is_secure = is_ssl();
 
+        nocache_headers();
+        header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0' );
+        header( 'Pragma: no-cache' );
         status_header( 403 );
 
         include plugin_dir_path( dirname( __FILE__ ) ) . 'templates/challenge-page.php';

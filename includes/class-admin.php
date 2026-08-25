@@ -326,7 +326,7 @@ class PoW_Captcha_Admin {
     public function render_benchmark_section() {
         ?>
         <p><?php esc_html_e( 'Measure the same JavaScript SHA-256 worker used by visitors, then test real solves. Results stay in this browser.', 'wp-pow-captcha' ); ?></p>
-        <div id="pow-benchmark" class="pow-benchmark-card" data-worker-url="<?php echo esc_url( add_query_arg( 'ver', '2.1.0', plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ) ); ?>">
+        <div id="pow-benchmark" class="pow-benchmark-card" data-worker-url="<?php echo esc_url( add_query_arg( 'ver', '2.2.0', plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ) ); ?>">
             <div class="pow-benchmark-actions">
                 <button type="button" class="button button-primary" id="pow-run-benchmark"><?php esc_html_e( 'Benchmark This Device', 'wp-pow-captcha' ); ?></button>
                 <label for="pow-test-difficulty"><?php esc_html_e( 'Test difficulty', 'wp-pow-captcha' ); ?></label>
@@ -406,8 +406,8 @@ class PoW_Captcha_Admin {
         }
 
         $plugin_url = plugin_dir_url( dirname( __FILE__ ) );
-        wp_enqueue_style( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.css', array(), '2.1.0' );
-        wp_enqueue_script( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.js', array(), '2.1.0', true );
+        wp_enqueue_style( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.css', array(), '2.2.0' );
+        wp_enqueue_script( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.js', array(), '2.2.0', true );
     }
 
     /**

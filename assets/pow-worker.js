@@ -19,16 +19,12 @@ self.onmessage = function (e) {
         return;
     }
 
-    runSolve(data.challenge, Number(data.difficulty), data.startCounter || 0, Number(data.version || 1));
+    runSolve(data.challenge, Number(data.difficulty), data.startCounter || 0, Number(data.version));
 };
 
 /** Solve a challenge and periodically report real progress. */
 function runSolve(challenge, difficulty, startCounter, version) {
-    var validDifficulty = version === 1
-        ? difficulty >= 1 && difficulty <= 8
-        : difficulty >= 0 && difficulty <= 140;
-
-    if (typeof challenge !== 'string' || !validDifficulty) {
+    if (typeof challenge !== 'string' || version !== 3 || difficulty < 0 || difficulty > 140) {
         self.postMessage({ type: 'error', message: 'Invalid proof-of-work parameters.' });
         return;
     }
@@ -42,7 +38,7 @@ function runSolve(challenge, difficulty, startCounter, version) {
         var limit = counter + yieldEvery;
         while (counter < limit) {
             var hex = sha256(challenge + counter);
-            if (version === 1 ? meetsLegacyDifficulty(hex, difficulty) : meetsDifficulty(hex, difficulty)) {
+            if (meetsDifficulty(hex, difficulty)) {
                 var elapsed = performance.now() - started;
                 self.postMessage({
                     type: 'solution',
@@ -107,11 +103,6 @@ function runBenchmark(duration) {
     }
 
     tick();
-}
-
-/** Match the legacy leading-hex-zero target during the migration window. */
-function meetsLegacyDifficulty(hex, difficulty) {
-    return hex.substr(0, difficulty) === '0'.repeat(difficulty);
 }
 
 /** Match PHP's whole-bit plus fractional-tenth-bit target. */

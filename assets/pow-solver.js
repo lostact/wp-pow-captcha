@@ -149,21 +149,37 @@
         return true;
     }
 
-    function runFormCaptcha(element, workerUrl) {
-        var challenge = element.getAttribute('data-challenge');
-        var difficulty = parseInt(element.getAttribute('data-difficulty'), 10);
-        var version = parseInt(element.getAttribute('data-version') || '1', 10);
+    function populateChallengeFields(element, challenge) {
+        var fields = {
+            '_pow_challenge': challenge.challenge,
+            '_pow_expires': challenge.expires,
+            '_pow_difficulty': challenge.difficulty,
+            '_pow_version': challenge.version,
+            '_pow_algorithm': challenge.algorithm,
+            '_pow_sig': challenge.signature
+        };
+
+        Object.keys(fields).forEach(function (name) {
+            var field = element.querySelector('input[name="' + name + '"]');
+            if (field) {
+                field.value = fields[name];
+            }
+        });
+    }
+
+    function runFormCaptcha(element, workerUrl, challenge) {
         var solutionField = element.querySelector('input[name="_pow_solution"]');
         var status = element.querySelector('.pow-status');
         var details = element.querySelector('.pow-details');
 
-        if (!challenge || isNaN(difficulty) || !solutionField) {
-            return;
+        if (!challenge || !challenge.challenge || !solutionField) {
+            throw new Error('Invalid challenge response.');
         }
 
+        populateChallengeFields(element, challenge);
         element.setAttribute('data-pow-solving', 'true');
         setState(element, 'solving');
-        solve(workerUrl, challenge, difficulty, version, {
+        solve(workerUrl, challenge.challenge, Number(challenge.difficulty), Number(challenge.version), {
             onProgress: function (data) {
                 updateTelemetry(status, details, data);
             },
@@ -197,6 +213,38 @@
         });
     }
 
+    function requestFormChallenge(element, workerUrl, challengeUrl) {
+        var status = element.querySelector('.pow-status');
+        var details = element.querySelector('.pow-details');
+        var separator = challengeUrl.indexOf('?') === -1 ? '?' : '&';
+        var url = challengeUrl + separator + '_pow_cache_bust=' + encodeURIComponent(Date.now() + '-' + Math.random());
+
+        fetch(url, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Accept': 'application/json' }
+        }).then(function (response) {
+            if (!response.ok) {
+                throw new Error('Challenge request failed with HTTP ' + response.status + '.');
+            }
+            return response.json();
+        }).then(function (payload) {
+            if (!payload || payload.success !== true || !payload.data) {
+                throw new Error('Invalid challenge response.');
+            }
+            runFormCaptcha(element, workerUrl, payload.data);
+        }).catch(function () {
+            setState(element, 'error');
+            if (status) {
+                status.textContent = 'Unable to start the security check. Reload the page and try again.';
+            }
+            if (details) {
+                details.textContent = 'The fresh challenge request failed.';
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         if (runChallengePage()) {
             return;
@@ -208,19 +256,20 @@
         }
 
         var workerUrl = window.powConfig ? window.powConfig.workerUrl : null;
-        if (!workerUrl) {
+        var challengeUrl = window.powConfig ? window.powConfig.challengeUrl : null;
+        if (!workerUrl || !challengeUrl) {
             captchas.forEach(function (captcha) {
                 setState(captcha, 'error');
                 var status = captcha.querySelector('.pow-status');
                 if (status) {
-                    status.textContent = 'Security worker is not configured.';
+                    status.textContent = 'Security challenge service is not configured.';
                 }
             });
             return;
         }
 
         captchas.forEach(function (captcha) {
-            runFormCaptcha(captcha, workerUrl);
+            requestFormChallenge(captcha, workerUrl, challengeUrl);
         });
 
         document.addEventListener('submit', function (event) {
@@ -237,7 +286,7 @@
             if (status) {
                 status.textContent = captcha.getAttribute('data-pow-state') === 'error'
                     ? 'Security check failed. Reload the page and try again.'
-                    : 'Please wait; the security check is still running…';
+                    : 'Please wait; the security check is still preparing or running…';
             }
         }, true);
     });

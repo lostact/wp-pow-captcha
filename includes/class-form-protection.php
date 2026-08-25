@@ -14,6 +14,9 @@ class PoW_Captcha_Form_Protection {
      */
     private $challenge;
 
+    /** @var WP_Error|null Cached fail-fast login PoW error for this request. */
+    private $login_pow_error = null;
+
     /**
      * Constructor.
      *
@@ -30,7 +33,8 @@ class PoW_Captcha_Form_Protection {
 
         if ( in_array( 'login', $protected_forms, true ) ) {
             add_action( 'login_form', array( $this, 'inject_hidden_fields' ) );
-            add_filter( 'authenticate', array( $this, 'verify_login' ), 30, 3 );
+            add_filter( 'authenticate', array( $this, 'verify_login_early' ), 5, 3 );
+            add_filter( 'authenticate', array( $this, 'enforce_login_pow_result' ), PHP_INT_MAX, 3 );
             add_action( 'login_enqueue_scripts', array( $this, 'enqueue_assets' ) );
         }
 
@@ -45,9 +49,12 @@ class PoW_Captcha_Form_Protection {
             add_action( 'login_enqueue_scripts', array( $this, 'enqueue_assets' ) );
         }
 
-        // Enqueue front-end assets when any form protection is active.
+        // Enqueue front-end assets and expose a deliberately uncached challenge
+        // endpoint when any form protection is active.
         if ( ! empty( $protected_forms ) ) {
             add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+            add_action( 'wp_ajax_nopriv_pow_captcha_challenge', array( $this, 'ajax_generate_challenge' ) );
+            add_action( 'wp_ajax_pow_captcha_challenge', array( $this, 'ajax_generate_challenge' ) );
         }
     }
 
@@ -61,19 +68,20 @@ class PoW_Captcha_Form_Protection {
             'pow-captcha',
             $plugin_url . 'assets/pow-captcha.css',
             array(),
-            '2.1.0'
+            '2.2.0'
         );
 
         wp_enqueue_script(
             'pow-solver',
             $plugin_url . 'assets/pow-solver.js',
             array(),
-            '2.1.0',
+            '2.2.0',
             true
         );
 
         wp_localize_script( 'pow-solver', 'powConfig', array(
-            'workerUrl' => add_query_arg( 'ver', '2.1.0', $plugin_url . 'assets/pow-worker.js' ),
+            'workerUrl'   => add_query_arg( 'ver', '2.2.0', $plugin_url . 'assets/pow-worker.js' ),
+            'challengeUrl' => admin_url( 'admin-ajax.php?action=pow_captcha_challenge' ),
         ) );
     }
 
@@ -81,28 +89,18 @@ class PoW_Captcha_Form_Protection {
      * Inject hidden PoW challenge fields into a form.
      */
     public function inject_hidden_fields() {
-        $difficulty     = (int) get_option( 'pow_form_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
-        $difficulty     = PoW_Captcha_Challenge::clamp_difficulty( $difficulty );
-        $challenge_data = $this->challenge->generate( $difficulty );
         ?>
-        <div class="pow-captcha"
-             data-pow-state="solving"
-             data-challenge="<?php echo esc_attr( $challenge_data['challenge'] ); ?>"
-             data-expires="<?php echo esc_attr( $challenge_data['expires'] ); ?>"
-             data-difficulty="<?php echo esc_attr( $challenge_data['difficulty'] ); ?>"
-             data-version="<?php echo esc_attr( $challenge_data['version'] ); ?>"
-             data-algorithm="<?php echo esc_attr( $challenge_data['algorithm'] ); ?>"
-             data-sig="<?php echo esc_attr( $challenge_data['signature'] ); ?>">
-            <input type="hidden" name="_pow_challenge" value="<?php echo esc_attr( $challenge_data['challenge'] ); ?>">
-            <input type="hidden" name="_pow_expires" value="<?php echo esc_attr( $challenge_data['expires'] ); ?>">
-            <input type="hidden" name="_pow_difficulty" value="<?php echo esc_attr( $challenge_data['difficulty'] ); ?>">
-            <input type="hidden" name="_pow_version" value="<?php echo esc_attr( $challenge_data['version'] ); ?>">
-            <input type="hidden" name="_pow_algorithm" value="<?php echo esc_attr( $challenge_data['algorithm'] ); ?>">
-            <input type="hidden" name="_pow_sig" value="<?php echo esc_attr( $challenge_data['signature'] ); ?>">
+        <div class="pow-captcha" data-pow-state="loading">
+            <input type="hidden" name="_pow_challenge" value="">
+            <input type="hidden" name="_pow_expires" value="">
+            <input type="hidden" name="_pow_difficulty" value="">
+            <input type="hidden" name="_pow_version" value="">
+            <input type="hidden" name="_pow_algorithm" value="">
+            <input type="hidden" name="_pow_sig" value="">
             <input type="hidden" name="_pow_solution" value="">
             <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'wp-pow-captcha' ); ?>" aria-busy="true"><span></span></div>
-            <p class="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Running security check…', 'wp-pow-captcha' ); ?></p>
-            <p class="pow-details"><?php esc_html_e( 'Starting secure worker…', 'wp-pow-captcha' ); ?></p>
+            <p class="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Preparing security check…', 'wp-pow-captcha' ); ?></p>
+            <p class="pow-details"><?php esc_html_e( 'Requesting a fresh challenge…', 'wp-pow-captcha' ); ?></p>
         </div>
         <?php
     }
@@ -132,24 +130,45 @@ class PoW_Captcha_Form_Protection {
         return $this->challenge->verify( $challenge, $expires, $difficulty, $sig, $solution, $version, $algorithm );
     }
 
+    /** Generate a fresh, explicitly non-cacheable form challenge. */
+    public function ajax_generate_challenge() {
+        nocache_headers();
+        header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+        header( 'Pragma: no-cache' );
+
+        $difficulty = (int) get_option( 'pow_form_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
+        $challenge  = $this->challenge->generate( PoW_Captcha_Challenge::clamp_difficulty( $difficulty ) );
+
+        wp_send_json_success( $challenge );
+    }
+
     /**
-     * Verify login form submission.
+     * Reject invalid PoW before WordPress performs password hashing.
      *
-     * @param WP_Error|WP_User|null $user     The authenticated user or error.
-     * @param string                 $username The username.
-     * @param string                 $password The password.
+     * Core's priority-20 callbacks do not preserve a prior WP_Error for a
+     * non-empty username, so they are removed only for this failed request.
+     *
+     * @param WP_Error|WP_User|null $user     Current authentication result.
+     * @param string                 $username Login name or email.
+     * @param string                 $password Password.
      * @return WP_Error|WP_User|null
      */
-    public function verify_login( $user, string $username, string $password ) {
-        if ( empty( $username ) ) {
+    public function verify_login_early( $user, string $username, string $password ) {
+        if ( empty( $username ) || empty( $password ) || $this->verify_from_post() ) {
             return $user;
         }
 
-        if ( ! $this->verify_from_post() ) {
-            return new WP_Error( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'wp-pow-captcha' ) );
-        }
+        $this->login_pow_error = new WP_Error( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'wp-pow-captcha' ) );
 
-        return $user;
+        remove_filter( 'authenticate', 'wp_authenticate_username_password', 20 );
+        remove_filter( 'authenticate', 'wp_authenticate_email_password', 20 );
+
+        return $this->login_pow_error;
+    }
+
+    /** Ensure no later authentication provider can overwrite a PoW failure. */
+    public function enforce_login_pow_result( $user, string $username, string $password ) {
+        return $this->login_pow_error instanceof WP_Error ? $this->login_pow_error : $user;
     }
 
     /**
