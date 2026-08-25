@@ -212,7 +212,7 @@
             worker.postMessage({
                 challenge: randomChallenge(),
                 difficulty: difficulty,
-                version: 2
+                version: 3
             });
         });
     }

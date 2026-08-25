@@ -50,20 +50,37 @@ class PoW_Captcha_URL_Protection {
 
         $secret_key = get_option( 'pow_secret_key', '' );
 
-        // Check for cleared cookie.
+        // Check the signed, server-expiring, IP-bound clearance cookie.
         if ( isset( $_COOKIE['pow_cleared'] ) ) {
             $cookie_value = sanitize_text_field( wp_unslash( $_COOKIE['pow_cleared'] ) );
-            $parts        = explode( ':', $cookie_value, 2 );
+            $parts        = explode( ':', $cookie_value );
 
-            if ( count( $parts ) === 2 ) {
-                list( $nonce, $hmac ) = $parts;
-                $expected_hmac = hash_hmac( 'sha256', $nonce . ':cleared', $secret_key );
+            if ( 4 === count( $parts ) ) {
+                $version = (int) $parts[0];
+                $expires = (int) $parts[1];
+                $nonce   = sanitize_text_field( $parts[2] );
+                $hmac    = sanitize_text_field( $parts[3] );
 
-                if ( hash_equals( $expected_hmac, $hmac ) ) {
-                    // Valid cleared cookie — allow request.
+                $maximum_lifetime = max( 30, min( 3600, (int) get_option( 'pow_expiry_time', 300 ) ) );
+                $valid_window     = $expires >= time() && $expires <= time() + $maximum_lifetime;
+                $valid_nonce      = 32 === strlen( $nonce ) && ctype_xdigit( $nonce );
+                $payload          = implode( ':', array( $version, 'cleared', $expires, $nonce, PoW_Captcha_Challenge::client_ip() ) );
+                $expected_hmac    = hash_hmac( 'sha256', $payload, $secret_key );
+
+                if ( PoW_Captcha_Challenge::VERSION === $version && $valid_window && $valid_nonce && hash_equals( $expected_hmac, $hmac ) ) {
                     return;
                 }
             }
+
+            // Remove malformed, expired, legacy, or IP-mismatched clearances.
+            setcookie( 'pow_cleared', '', array(
+                'expires'  => time() - HOUR_IN_SECONDS,
+                'path'     => COOKIEPATH,
+                'domain'   => COOKIE_DOMAIN,
+                'secure'   => is_ssl(),
+                'httponly' => true,
+                'samesite' => 'Strict',
+            ) );
         }
 
         // Check for solution cookie.
@@ -74,36 +91,30 @@ class PoW_Captcha_URL_Protection {
             // Delete the pow_solution cookie immediately regardless of outcome.
             setcookie( 'pow_solution', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN );
 
-            if ( 5 === count( $parts ) || 7 === count( $parts ) ) {
+            if ( 7 === count( $parts ) ) {
                 $challenge  = sanitize_text_field( $parts[0] );
                 $expires    = (int) $parts[1];
                 $difficulty = (int) $parts[2];
+                $version    = (int) $parts[3];
+                $algorithm  = sanitize_text_field( $parts[4] );
+                $sig        = sanitize_text_field( $parts[5] );
+                $solution   = $parts[6];
 
-                if ( 7 === count( $parts ) ) {
-                    $version   = (int) $parts[3];
-                    $algorithm = sanitize_text_field( $parts[4] );
-                    $sig       = sanitize_text_field( $parts[5] );
-                    $solution  = $parts[6];
-                } else {
-                    $version   = 1;
-                    $algorithm = 'sha256';
-                    $sig       = sanitize_text_field( $parts[3] );
-                    $solution  = $parts[4];
-                }
-
-                if ( ctype_digit( $solution ) ) {
+                if ( PoW_Captcha_Challenge::VERSION === $version && ctype_digit( $solution ) ) {
                     if ( $this->challenge->verify( $challenge, $expires, $difficulty, $sig, $solution, $version, $algorithm ) ) {
-                        // Verification passed — issue cleared cookie.
-                        $nonce         = bin2hex( random_bytes( 8 ) );
-                        $cleared_hmac  = hash_hmac( 'sha256', $nonce . ':cleared', $secret_key );
-                        $cleared_value = $nonce . ':' . $cleared_hmac;
+                        // Clearance cannot outlive the original signed challenge
+                        // and is valid only from the IP that received that challenge.
+                        $nonce            = bin2hex( random_bytes( 16 ) );
+                        $clearance_payload = implode( ':', array( $version, 'cleared', $expires, $nonce, PoW_Captcha_Challenge::client_ip() ) );
+                        $cleared_hmac      = hash_hmac( 'sha256', $clearance_payload, $secret_key );
+                        $cleared_value     = implode( ':', array( $version, $expires, $nonce, $cleared_hmac ) );
 
                         setcookie( 'pow_cleared', $cleared_value, array(
-                            'expires'  => time() + HOUR_IN_SECONDS,
+                            'expires'  => $expires,
                             'path'     => COOKIEPATH,
                             'domain'   => COOKIE_DOMAIN,
                             'secure'   => is_ssl(),
-                            'httponly'  => true,
+                            'httponly' => true,
                             'samesite' => 'Strict',
                         ) );
 

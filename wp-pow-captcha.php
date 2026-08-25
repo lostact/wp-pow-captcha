@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP PoW Captcha
  * Description: Protects configurable URLs and forms using a proof-of-work challenge system. No external dependencies, no third-party CAPTCHA services.
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: WP PoW Captcha
  * License: GPL-2.0-or-later
  * Text Domain: wp-pow-captcha

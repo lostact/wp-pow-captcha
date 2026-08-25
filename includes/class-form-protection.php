@@ -61,19 +61,19 @@ class PoW_Captcha_Form_Protection {
             'pow-captcha',
             $plugin_url . 'assets/pow-captcha.css',
             array(),
-            '2.0.0'
+            '2.1.0'
         );
 
         wp_enqueue_script(
             'pow-solver',
             $plugin_url . 'assets/pow-solver.js',
             array(),
-            '2.0.0',
+            '2.1.0',
             true
         );
 
         wp_localize_script( 'pow-solver', 'powConfig', array(
-            'workerUrl' => add_query_arg( 'ver', '2.0.0', $plugin_url . 'assets/pow-worker.js' ),
+            'workerUrl' => add_query_arg( 'ver', '2.1.0', $plugin_url . 'assets/pow-worker.js' ),
         ) );
     }
 
@@ -113,21 +113,19 @@ class PoW_Captcha_Form_Protection {
      * @return bool True if verification passes, false otherwise.
      */
     public function verify_from_post(): bool {
-        if ( ! isset( $_POST['_pow_challenge'], $_POST['_pow_expires'], $_POST['_pow_difficulty'], $_POST['_pow_sig'], $_POST['_pow_solution'] ) ) {
+        if ( ! isset( $_POST['_pow_challenge'], $_POST['_pow_expires'], $_POST['_pow_difficulty'], $_POST['_pow_version'], $_POST['_pow_algorithm'], $_POST['_pow_sig'], $_POST['_pow_solution'] ) ) {
             return false;
         }
 
         $challenge  = sanitize_text_field( wp_unslash( $_POST['_pow_challenge'] ) );
         $expires    = (int) $_POST['_pow_expires'];
         $difficulty = (int) $_POST['_pow_difficulty'];
-        $version    = isset( $_POST['_pow_version'] ) ? (int) $_POST['_pow_version'] : 1;
-        $algorithm  = isset( $_POST['_pow_algorithm'] )
-            ? sanitize_text_field( wp_unslash( $_POST['_pow_algorithm'] ) )
-            : 'sha256';
+        $version    = (int) $_POST['_pow_version'];
+        $algorithm  = sanitize_text_field( wp_unslash( $_POST['_pow_algorithm'] ) );
         $sig        = sanitize_text_field( wp_unslash( $_POST['_pow_sig'] ) );
         $solution   = sanitize_text_field( wp_unslash( $_POST['_pow_solution'] ) );
 
-        if ( ! ctype_digit( $solution ) ) {
+        if ( PoW_Captcha_Challenge::VERSION !== $version || ! ctype_digit( $solution ) ) {
             return false;
         }
 

@@ -9,8 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class PoW_Captcha_Challenge {
 
-    /** Current challenge protocol version. */
-    public const VERSION = 2;
+    /** Current IP-bound challenge protocol version. */
+    public const VERSION = 3;
 
     /** Minimum supported fine-grained difficulty. */
     public const MIN_DIFFICULTY = 0;
@@ -22,7 +22,33 @@ class PoW_Captcha_Challenge {
     public const DEFAULT_DIFFICULTY = 60;
 
     /** Current proof-of-work algorithm identifier. */
-    public const ALGORITHM = 'sha256-fine-v2';
+    public const ALGORITHM = 'sha256-fine-v3';
+
+    /** Official Cloudflare HTTP proxy ranges from https://www.cloudflare.com/ips/. */
+    private const CLOUDFLARE_RANGES = array(
+        '103.21.244.0/22',
+        '103.22.200.0/22',
+        '103.31.4.0/22',
+        '104.16.0.0/13',
+        '104.24.0.0/14',
+        '108.162.192.0/18',
+        '131.0.72.0/22',
+        '141.101.64.0/18',
+        '162.158.0.0/15',
+        '172.64.0.0/13',
+        '173.245.48.0/20',
+        '188.114.96.0/20',
+        '190.93.240.0/20',
+        '197.234.240.0/22',
+        '198.41.128.0/17',
+        '2400:cb00::/32',
+        '2606:4700::/32',
+        '2803:f800::/32',
+        '2405:b500::/32',
+        '2405:8100::/32',
+        '2a06:98c0::/29',
+        '2c0f:f248::/32',
+    );
 
     /**
      * Byte thresholds for fractional tenths of a bit.
@@ -56,9 +82,10 @@ class PoW_Captcha_Challenge {
         $expires     = time() + $expiry_time;
         $version     = self::VERSION;
         $algorithm   = self::ALGORITHM;
+        $client_ip   = self::client_ip();
         $signature   = hash_hmac(
             'sha256',
-            self::signature_payload( $challenge, $expires, $difficulty, $version, $algorithm ),
+            self::signature_payload( $challenge, $expires, $difficulty, $version, $algorithm, $client_ip ),
             $this->secret_key
         );
 
@@ -75,8 +102,8 @@ class PoW_Captcha_Challenge {
     /**
      * Verify a proof-of-work solution.
      *
-     * Version 1 remains accepted for already-rendered forms and challenge
-     * pages until their signed expiry time. New challenges always use v2.
+     * Only the current IP-bound protocol is accepted. Challenges rendered by
+     * older versions are intentionally invalidated by this security upgrade.
      *
      * @param string $challenge  Challenge hex string.
      * @param int    $expires    Expiration Unix timestamp.
@@ -84,7 +111,7 @@ class PoW_Captcha_Challenge {
      * @param string $signature  HMAC signature.
      * @param string $solution   Numeric counter.
      * @param int    $version    Challenge protocol version.
-     * @param string $algorithm  Signed algorithm identifier for v2.
+     * @param string $algorithm  Signed algorithm identifier.
      * @return bool True if valid.
      */
     public function verify(
@@ -93,8 +120,8 @@ class PoW_Captcha_Challenge {
         int $difficulty,
         string $signature,
         string $solution,
-        int $version = 1,
-        string $algorithm = 'sha256'
+        int $version = 0,
+        string $algorithm = ''
     ): bool {
         if ( time() > $expires || ! ctype_xdigit( $challenge ) || 32 !== strlen( $challenge ) ) {
             return false;
@@ -102,10 +129,6 @@ class PoW_Captcha_Challenge {
 
         if ( ! ctype_digit( $solution ) || strlen( $solution ) > 20 ) {
             return false;
-        }
-
-        if ( 1 === $version ) {
-            return $this->verify_legacy( $challenge, $expires, $difficulty, $signature, $solution );
         }
 
         if (
@@ -119,7 +142,7 @@ class PoW_Captcha_Challenge {
 
         $expected_signature = hash_hmac(
             'sha256',
-            self::signature_payload( $challenge, $expires, $difficulty, $version, $algorithm ),
+            self::signature_payload( $challenge, $expires, $difficulty, $version, $algorithm, self::client_ip() ),
             $this->secret_key
         );
 
@@ -131,7 +154,7 @@ class PoW_Captcha_Challenge {
         return self::hash_meets_difficulty( $hash, $difficulty );
     }
 
-    /** Clamp a v2 difficulty to its supported range. */
+    /** Clamp a fine-grained difficulty to its supported range. */
     public static function clamp_difficulty( int $difficulty ): int {
         return max( self::MIN_DIFFICULTY, min( self::MAX_DIFFICULTY, $difficulty ) );
     }
@@ -141,12 +164,91 @@ class PoW_Captcha_Challenge {
         return pow( 2, 10 + self::clamp_difficulty( $difficulty ) / 10 );
     }
 
-    /** Build the unambiguous signed v2 payload. */
-    private static function signature_payload( string $challenge, int $expires, int $difficulty, int $version, string $algorithm ): string {
-        return implode( ':', array( $version, $algorithm, $challenge, $expires, $difficulty ) );
+    /**
+     * Return the normalized visitor IP, trusting Cloudflare headers only when
+     * the direct peer belongs to a trusted proxy range.
+     *
+     * Extra proxy CIDRs (for example a Cloudflare Tunnel local peer) may be
+     * supplied with the pow_captcha_trusted_proxy_ranges filter.
+     */
+    public static function client_ip(): string {
+        $remote_ip = self::normalize_ip( $_SERVER['REMOTE_ADDR'] ?? '' );
+        if ( '' === $remote_ip ) {
+            return 'unknown';
+        }
+
+        $trusted_ranges = apply_filters( 'pow_captcha_trusted_proxy_ranges', self::CLOUDFLARE_RANGES );
+        if ( is_array( $trusted_ranges ) && self::ip_in_ranges( $remote_ip, $trusted_ranges ) ) {
+            // Pseudo IPv4 overwrite mode preserves the real IPv6 address here.
+            $connecting_ipv6 = self::normalize_ip( $_SERVER['HTTP_CF_CONNECTING_IPV6'] ?? '' );
+            if ( '' !== $connecting_ipv6 && false !== strpos( $connecting_ipv6, ':' ) ) {
+                return $connecting_ipv6;
+            }
+
+            $connecting_ip = self::normalize_ip( $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '' );
+            if ( '' !== $connecting_ip ) {
+                return $connecting_ip;
+            }
+        }
+
+        return $remote_ip;
     }
 
-    /** Check the v2 whole-bit and fractional-bit target. */
+    /** Build the unambiguous signed, IP-bound v3 payload. */
+    private static function signature_payload( string $challenge, int $expires, int $difficulty, int $version, string $algorithm, string $client_ip ): string {
+        return implode( ':', array( $version, $algorithm, $challenge, $expires, $difficulty, $client_ip ) );
+    }
+
+    /** Normalize valid IPv4 and IPv6 representations for stable signatures. */
+    private static function normalize_ip( $ip ): string {
+        $packed = @inet_pton( trim( (string) $ip ) );
+        return false === $packed ? '' : inet_ntop( $packed );
+    }
+
+    /** Return whether an IP belongs to any supplied IPv4 or IPv6 CIDR. */
+    private static function ip_in_ranges( string $ip, array $ranges ): bool {
+        $ip_binary = @inet_pton( $ip );
+        if ( false === $ip_binary ) {
+            return false;
+        }
+
+        foreach ( $ranges as $range ) {
+            $parts = explode( '/', (string) $range, 2 );
+            if ( 2 !== count( $parts ) ) {
+                continue;
+            }
+
+            $network_binary = @inet_pton( trim( $parts[0] ) );
+            $prefix_length  = (int) $parts[1];
+            if ( false === $network_binary || strlen( $network_binary ) !== strlen( $ip_binary ) ) {
+                continue;
+            }
+
+            $maximum_bits = 8 * strlen( $ip_binary );
+            if ( $prefix_length < 0 || $prefix_length > $maximum_bits ) {
+                continue;
+            }
+
+            $full_bytes = intdiv( $prefix_length, 8 );
+            $extra_bits = $prefix_length % 8;
+            if ( substr( $ip_binary, 0, $full_bytes ) !== substr( $network_binary, 0, $full_bytes ) ) {
+                continue;
+            }
+
+            if ( $extra_bits > 0 ) {
+                $mask = ( 0xff << ( 8 - $extra_bits ) ) & 0xff;
+                if ( ( ord( $ip_binary[ $full_bytes ] ) & $mask ) !== ( ord( $network_binary[ $full_bytes ] ) & $mask ) ) {
+                    continue;
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /** Check the whole-bit and fractional-bit target. */
     private static function hash_meets_difficulty( string $hash, int $difficulty ): bool {
         $whole_bits = 10 + intdiv( $difficulty, 10 );
         $fraction   = $difficulty % 10;
@@ -190,18 +292,4 @@ class PoW_Captcha_Challenge {
             ( $bytes[ $byte_index + 1 ] >> ( 8 - $shift ) );
     }
 
-    /** Verify a legacy leading-hex-zero challenge. */
-    private function verify_legacy( string $challenge, int $expires, int $difficulty, string $signature, string $solution ): bool {
-        if ( $difficulty < 1 || $difficulty > 8 ) {
-            return false;
-        }
-
-        $expected_signature = hash_hmac( 'sha256', "{$challenge}:{$expires}:{$difficulty}", $this->secret_key );
-        if ( ! hash_equals( $expected_signature, $signature ) ) {
-            return false;
-        }
-
-        $hash = hash( 'sha256', $challenge . $solution );
-        return substr( $hash, 0, $difficulty ) === str_repeat( '0', $difficulty );
-    }
 }
