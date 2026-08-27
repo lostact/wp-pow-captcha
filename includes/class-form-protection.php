@@ -68,19 +68,19 @@ class PoW_Captcha_Form_Protection {
             'pow-captcha',
             $plugin_url . 'assets/pow-captcha.css',
             array(),
-            '2.2.0'
+            POW_CAPTCHA_VERSION
         );
 
         wp_enqueue_script(
             'pow-solver',
             $plugin_url . 'assets/pow-solver.js',
             array(),
-            '2.2.0',
+            POW_CAPTCHA_VERSION,
             true
         );
 
         wp_localize_script( 'pow-solver', 'powConfig', array(
-            'workerUrl'   => add_query_arg( 'ver', '2.2.0', $plugin_url . 'assets/pow-worker.js' ),
+            'workerUrl'   => add_query_arg( 'ver', POW_CAPTCHA_VERSION, $plugin_url . 'assets/pow-worker.js' ),
             'challengeUrl' => admin_url( 'admin-ajax.php?action=pow_captcha_challenge' ),
         ) );
     }

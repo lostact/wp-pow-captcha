@@ -62,6 +62,12 @@ class PoW_Captcha_Admin {
             'sanitize_callback' => array( $this, 'sanitize_difficulty' ),
         ) );
 
+        register_setting( 'pow_captcha_group', PoW_Captcha_Early_Protection::OPTION_ENABLED, array(
+            'type'              => 'boolean',
+            'sanitize_callback' => array( $this, 'sanitize_early_protection' ),
+            'default'           => false,
+        ) );
+
         // Section: Form Protection.
         add_settings_section(
             'pow_form_section',
@@ -126,6 +132,14 @@ class PoW_Captcha_Admin {
             'pow_general_section'
         );
 
+        add_settings_field(
+            PoW_Captcha_Early_Protection::OPTION_ENABLED,
+            __( 'Lowest-resource URL Protection', 'wp-pow-captcha' ),
+            array( $this, 'render_early_protection_field' ),
+            'pow-captcha',
+            'pow_general_section'
+        );
+
         // Section: Benchmark and calculator.
         add_settings_section(
             'pow_benchmark_section',
@@ -165,6 +179,11 @@ class PoW_Captcha_Admin {
         }
 
         return array_values( array_intersect( $input, $allowed ) );
+    }
+
+    /** Enable/disable and install/remove the optional early gateway. */
+    public function sanitize_early_protection( $input ): bool {
+        return PoW_Captcha_Early_Protection::apply_setting( ! empty( $input ) );
     }
 
     /**
@@ -233,6 +252,34 @@ class PoW_Captcha_Admin {
             esc_attr( $value )
         );
         echo '<p class="description">' . esc_html__( 'Time in seconds before a challenge expires (30–3600). Default: 300 (5 minutes).', 'wp-pow-captcha' ) . '</p>';
+    }
+
+    /** Render the optional advanced-cache gateway control and diagnostics. */
+    public function render_early_protection_field() {
+        $status  = PoW_Captcha_Early_Protection::status();
+        $checked = $status['enabled'] ? 'checked' : '';
+        $disabled = $status['foreign'] ? 'disabled' : '';
+
+        printf(
+            '<label><input type="checkbox" name="%1$s" value="1" %2$s %3$s> %4$s</label>',
+            esc_attr( PoW_Captcha_Early_Protection::OPTION_ENABLED ),
+            $checked,
+            $disabled,
+            esc_html__( 'Enable the advanced-cache gateway for protected URLs', 'wp-pow-captcha' )
+        );
+
+        if ( $status['foreign'] ) {
+            echo '<input type="hidden" name="' . esc_attr( PoW_Captcha_Early_Protection::OPTION_ENABLED ) . '" value="0">';
+            echo '<p class="notice notice-warning inline"><strong>' . esc_html__( 'Unavailable:', 'wp-pow-captcha' ) . '</strong> ' . esc_html__( 'Another advanced-cache.php drop-in already exists. WP PoW Captcha will not overwrite it.', 'wp-pow-captcha' ) . '</p>';
+        } elseif ( $status['active'] ) {
+            echo '<p class="notice notice-success inline"><strong>' . esc_html__( 'Active:', 'wp-pow-captcha' ) . '</strong> ' . esc_html__( 'Unsolved protected URL requests are rejected before normal plugins and the theme load.', 'wp-pow-captcha' ) . '</p>';
+        } elseif ( $status['enabled'] && ! $status['wp_cache'] ) {
+            echo '<p class="notice notice-warning inline"><strong>' . esc_html__( 'Setup incomplete:', 'wp-pow-captcha' ) . '</strong> ' . esc_html__( 'The managed drop-in exists, but WP_CACHE must be set to true in wp-config.php.', 'wp-pow-captcha' ) . '</p>';
+        } elseif ( ! empty( $status['message'] ) ) {
+            echo '<p class="description">' . esc_html( $status['message'] ) . '</p>';
+        }
+
+        echo '<p class="description">' . esc_html__( 'Optional. Uses WordPress advanced-cache.php to perform stateless URL challenge checks before ordinary plugins, the theme, routing, and the main query. Existing foreign cache drop-ins are never replaced.', 'wp-pow-captcha' ) . '</p>';
     }
 
     /**
@@ -326,7 +373,7 @@ class PoW_Captcha_Admin {
     public function render_benchmark_section() {
         ?>
         <p><?php esc_html_e( 'Measure the same JavaScript SHA-256 worker used by visitors, then test real solves. Results stay in this browser.', 'wp-pow-captcha' ); ?></p>
-        <div id="pow-benchmark" class="pow-benchmark-card" data-worker-url="<?php echo esc_url( add_query_arg( 'ver', '2.2.0', plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ) ); ?>">
+        <div id="pow-benchmark" class="pow-benchmark-card" data-worker-url="<?php echo esc_url( add_query_arg( 'ver', POW_CAPTCHA_VERSION, plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ) ); ?>">
             <div class="pow-benchmark-actions">
                 <button type="button" class="button button-primary" id="pow-run-benchmark"><?php esc_html_e( 'Benchmark This Device', 'wp-pow-captcha' ); ?></button>
                 <label for="pow-test-difficulty"><?php esc_html_e( 'Test difficulty', 'wp-pow-captcha' ); ?></label>
@@ -406,8 +453,8 @@ class PoW_Captcha_Admin {
         }
 
         $plugin_url = plugin_dir_url( dirname( __FILE__ ) );
-        wp_enqueue_style( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.css', array(), '2.2.0' );
-        wp_enqueue_script( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.js', array(), '2.2.0', true );
+        wp_enqueue_style( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.css', array(), POW_CAPTCHA_VERSION );
+        wp_enqueue_script( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.js', array(), POW_CAPTCHA_VERSION, true );
     }
 
     /**

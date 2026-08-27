@@ -15,6 +15,7 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 - Challenges and URL clearance are bound to the visitor IP.
 - Cloudflare-aware visitor IP detection with trusted proxy validation.
 - Fresh, non-cacheable challenges for forms and protected URL pages.
+- Optional early URL gateway that rejects unsolved requests before ordinary plugins and the theme load.
 - No external CAPTCHA service or third-party dependency.
 
 ## Design choices
@@ -26,6 +27,14 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 - **IP-bound clearance:** a solved URL challenge cannot be copied to a different visitor IP, and clearance cannot outlive the original challenge.
 - **No cached form puzzles:** pages contain placeholders; each browser requests a fresh challenge after page load.
 - **Fail-fast login checks:** invalid proof of work is rejected before WordPress performs password hashing.
+- **Optional lowest-resource mode:** a managed `advanced-cache.php` gateway performs protected URL checks early in bootstrap. It never overwrites another product's existing drop-in and falls back to standard protection when unavailable.
+
+## How lowest-resource mode works
+
+- WordPress settings are compiled into a generated `wp-content/pow-captcha-runtime.php` configuration whenever relevant options change.
+- The early `wp-content/advanced-cache.php` gateway reads this PHP configuration directly, so an unsolved request normally performs zero database queries.
+- Unsolved protected requests receive the standalone challenge before ordinary plugins, the theme, routing, and the main query load; cleared requests continue into WordPress normally.
+- Configuration writes are atomic, missing files fail open to standard protection, and an existing foreign `advanced-cache.php` is never overwritten.
 
 ## Installation
 
@@ -33,6 +42,7 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 2. In WordPress, open **Plugins → Add New Plugin → Upload Plugin**.
 3. Upload the ZIP and activate it.
 4. Open **Settings → PoW Captcha** to configure forms, URL patterns, difficulty, and expiry.
+5. Optionally enable **Lowest-resource URL Protection**. Automatic setup requires writable WordPress configuration/content files and an unused `advanced-cache.php` slot.
 
 ## Important limitations
 

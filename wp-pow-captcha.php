@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP PoW Captcha
  * Description: Protects configurable URLs and forms using a proof-of-work challenge system. No external dependencies, no third-party CAPTCHA services.
- * Version: 2.2.0
+ * Version: 2.3.0
  * Author: WP PoW Captcha
  * License: GPL-2.0-or-later
  * Text Domain: wp-pow-captcha
@@ -13,6 +13,8 @@
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
+
+define( 'POW_CAPTCHA_VERSION', '2.3.0' );
 
 register_activation_hook( __FILE__, 'pow_captcha_activate' );
 register_deactivation_hook( __FILE__, 'pow_captcha_deactivate' );
@@ -44,13 +46,27 @@ function pow_captcha_activate() {
     if ( false === get_option( 'pow_expiry_time' ) ) {
         add_option( 'pow_expiry_time', 300 );
     }
+    if ( false === get_option( 'pow_early_protection_enabled' ) ) {
+        add_option( 'pow_early_protection_enabled', false, '', false );
+    }
+
+    // Restore the optional early gateway after a plugin reactivation.
+    if ( get_option( 'pow_early_protection_enabled', false ) ) {
+        require_once plugin_dir_path( __FILE__ ) . 'includes/class-challenge.php';
+        require_once plugin_dir_path( __FILE__ ) . 'includes/class-early-protection.php';
+        PoW_Captcha_Early_Protection::install();
+    }
 }
 
 /**
  * Deactivation hook: do nothing so settings persist.
  */
 function pow_captcha_deactivate() {
-    // Intentionally empty — settings persist across deactivation.
+    // The preference persists, but executable bootstrap files must not remain
+    // active while the normal plugin is deactivated.
+    require_once plugin_dir_path( __FILE__ ) . 'includes/class-challenge.php';
+    require_once plugin_dir_path( __FILE__ ) . 'includes/class-early-protection.php';
+    PoW_Captcha_Early_Protection::uninstall();
 }
 
 /**
@@ -75,10 +91,15 @@ function pow_captcha_init() {
     }
     require_once plugin_dir_path( __FILE__ ) . 'includes/class-url-protection.php';
     require_once plugin_dir_path( __FILE__ ) . 'includes/class-form-protection.php';
-    require_once plugin_dir_path( __FILE__ ) . 'includes/class-admin.php';
+    require_once plugin_dir_path( __FILE__ ) . 'includes/class-early-protection.php';
 
-    $challenge      = new PoW_Captcha_Challenge();
-    $url_protection = new PoW_Captcha_URL_Protection( $challenge );
+    $challenge       = new PoW_Captcha_Challenge();
+    $url_protection  = new PoW_Captcha_URL_Protection( $challenge );
     $form_protection = new PoW_Captcha_Form_Protection( $challenge );
-    $admin          = new PoW_Captcha_Admin();
+    $early_protection = new PoW_Captcha_Early_Protection();
+
+    if ( is_admin() ) {
+        require_once plugin_dir_path( __FILE__ ) . 'includes/class-admin.php';
+        $admin = new PoW_Captcha_Admin();
+    }
 }

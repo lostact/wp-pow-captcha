@@ -145,8 +145,8 @@ if ( ! defined( 'ABSPATH' ) ) {
         window.powVersion    = <?php echo intval( $challenge['version'] ); ?>;
         window.powAlgorithm  = <?php echo wp_json_encode( $challenge['algorithm'] ); ?>;
         window.powSig        = <?php echo wp_json_encode( $challenge['signature'] ); ?>;
-        window.powWorkerUrl  = <?php echo wp_json_encode( add_query_arg( 'ver', '2.2.0', plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ) ); ?>;
+        window.powWorkerUrl  = <?php echo wp_json_encode( add_query_arg( 'ver', POW_CAPTCHA_VERSION, plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ) ); ?>;
     </script>
-    <script src="<?php echo esc_url( add_query_arg( 'ver', '2.2.0', plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-solver.js' ) ); ?>"></script>
+    <script src="<?php echo esc_url( add_query_arg( 'ver', POW_CAPTCHA_VERSION, plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-solver.js' ) ); ?>"></script>
 </body>
 </html>

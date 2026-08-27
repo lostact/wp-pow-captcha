@@ -28,6 +28,11 @@ class PoW_Captcha_URL_Protection {
      * Intercept requests to matching URLs.
      */
     public function intercept() {
+        // The advanced-cache gateway already validated this matching request.
+        if ( defined( 'POW_CAPTCHA_EARLY_PASSED' ) && POW_CAPTCHA_EARLY_PASSED ) {
+            return;
+        }
+
         $patterns = get_option( 'pow_url_patterns', array() );
 
         if ( empty( $patterns ) || ! is_array( $patterns ) ) {
