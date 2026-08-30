@@ -68,6 +68,12 @@ class PoW_Captcha_Admin {
             'default'           => 0,
         ) );
 
+        register_setting( 'pow_captcha_group', 'pow_interaction_mode', array(
+            'type'              => 'string',
+            'sanitize_callback' => array( $this, 'sanitize_interaction_mode' ),
+            'default'           => 'automatic',
+        ) );
+
         register_setting( 'pow_captcha_group', PoW_Captcha_Early_Protection::OPTION_ENABLED, array(
             'type'              => 'boolean',
             'sanitize_callback' => array( $this, 'sanitize_early_protection' ),
@@ -142,6 +148,14 @@ class PoW_Captcha_Admin {
             'pow_expiry_time',
             __( 'Challenge Expiry Time', 'wp-pow-captcha' ),
             array( $this, 'render_expiry_time_field' ),
+            'pow-captcha',
+            'pow_general_section'
+        );
+
+        add_settings_field(
+            'pow_interaction_mode',
+            __( 'Challenge Trigger', 'wp-pow-captcha' ),
+            array( $this, 'render_interaction_mode_field' ),
             'pow-captcha',
             'pow_general_section'
         );
@@ -261,6 +275,13 @@ class PoW_Captcha_Admin {
         return 0 === $value ? 0 : max( 128, min( 65535, $value ) );
     }
 
+    /** Sanitize the browser interaction required before solving starts. */
+    public function sanitize_interaction_mode( $input ): string {
+        $allowed = array( 'automatic', 'mouse', 'checkbox' );
+        $value   = sanitize_key( (string) $input );
+        return in_array( $value, $allowed, true ) ? $value : 'automatic';
+    }
+
     /**
      * Render the general settings section description.
      */
@@ -279,6 +300,23 @@ class PoW_Captcha_Admin {
             esc_attr( $value )
         );
         echo '<p class="description">' . esc_html__( 'Time in seconds before a challenge expires (30–3600). Default: 300 (5 minutes).', 'wp-pow-captcha' ) . '</p>';
+    }
+
+    /** Render the challenge interaction mode selector. */
+    public function render_interaction_mode_field() {
+        $value = (string) get_option( 'pow_interaction_mode', 'automatic' );
+        $modes = array(
+            'automatic' => __( 'Automatic (no interaction required)', 'wp-pow-captcha' ),
+            'mouse'     => __( 'Mouse movement', 'wp-pow-captcha' ),
+            'checkbox'  => __( 'Click a verification checkbox', 'wp-pow-captcha' ),
+        );
+
+        echo '<select name="pow_interaction_mode">';
+        foreach ( $modes as $mode => $label ) {
+            printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $mode ), selected( $value, $mode, false ), esc_html( $label ) );
+        }
+        echo '</select>';
+        echo '<p class="description">' . esc_html__( 'Choose what must happen before proof-of-work begins. Mouse and checkbox modes accept only genuine browser-generated interaction events.', 'wp-pow-captcha' ) . '</p>';
     }
 
     /** Render the optional advanced-cache gateway control and diagnostics. */
@@ -403,7 +441,7 @@ class PoW_Captcha_Admin {
             esc_attr__( 'Proof-of-work difficulty', 'wp-pow-captcha' ),
             esc_attr( $name )
         );
-        echo '<p class="description">' . esc_html__( 'Each step adds about 7.2% expected work. Difficulty 60 averages 65,536 attempts; use the benchmark below to estimate visitor wait times.', 'wp-pow-captcha' ) . '</p>';
+        echo '<p class="description">' . esc_html__( 'Each step adds about 7.2 percent expected work. Difficulty 60 averages 65,536 attempts; use the benchmark below to estimate visitor wait times.', 'wp-pow-captcha' ) . '</p>';
     }
 
     /** Render the interactive benchmark and processor estimate workspace. */
@@ -492,6 +530,35 @@ class PoW_Captcha_Admin {
         $plugin_url = plugin_dir_url( dirname( __FILE__ ) );
         wp_enqueue_style( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.css', array(), POW_CAPTCHA_VERSION );
         wp_enqueue_script( 'pow-captcha-admin', $plugin_url . 'assets/pow-admin.js', array(), POW_CAPTCHA_VERSION, true );
+        wp_localize_script( 'pow-captcha-admin', 'powAdminI18n', array(
+            'notMeasured'           => __( 'Not measured', 'wp-pow-captcha' ),
+            'expectedHashesPreview' => __( '≈ %1$s expected hashes', 'wp-pow-captcha' ),
+            'onThisBrowser'         => __( '%1$s on this browser', 'wp-pow-captcha' ),
+            'thisBrowser'           => __( 'This browser (measured)', 'wp-pow-captcha' ),
+            'lowEndMobile'          => __( 'Low-end mobile', 'wp-pow-captcha' ),
+            'typicalMobile'         => __( 'Typical mobile', 'wp-pow-captcha' ),
+            'typicalLaptop'         => __( 'Typical laptop', 'wp-pow-captcha' ),
+            'fastDesktop'           => __( 'Fast desktop', 'wp-pow-captcha' ),
+            'benchmarkingThroughput'=> __( 'Benchmarking SHA-256 throughput…', 'wp-pow-captcha' ),
+            'benchmarkingHashes'    => __( 'Benchmarking… %1$s hashes sampled', 'wp-pow-captcha' ),
+            'browserMeasured'       => __( 'This browser measured %1$s across %2$s hashes.', 'wp-pow-captcha' ),
+            'benchmarkFailed'       => __( 'Benchmark worker failed. Check browser worker support and try again.', 'wp-pow-captcha' ),
+            'solveWorkerFailed'     => __( 'Solve worker failed.', 'wp-pow-captcha' ),
+            'testCancelled'         => __( 'Test cancelled.', 'wp-pow-captcha' ),
+            'solveAtDifficulty'     => __( 'Solve %1$s of %2$s at difficulty %3$s…', 'wp-pow-captcha' ),
+            'solveProgress'         => __( 'Solve %1$s of %2$s: %3$s attempts · %4$s', 'wp-pow-captcha' ),
+            'completedSolves'       => __( 'Completed %1$s real solves at difficulty %2$s.', 'wp-pow-captcha' ),
+            'statistic'             => __( 'Statistic', 'wp-pow-captcha' ),
+            'solveTime'             => __( 'Solve time', 'wp-pow-captcha' ),
+            'minimum'               => __( 'Minimum', 'wp-pow-captcha' ),
+            'median'                => __( 'Median', 'wp-pow-captcha' ),
+            'average'               => __( 'Average', 'wp-pow-captcha' ),
+            'maximum'               => __( 'Maximum', 'wp-pow-captcha' ),
+            'totalAttempts'         => __( 'Total attempts', 'wp-pow-captcha' ),
+            'observedHashRate'      => __( 'Observed hash rate', 'wp-pow-captcha' ),
+            'solveTestFailed'       => __( 'Solve test failed.', 'wp-pow-captcha' ),
+            'savedBenchmark'        => __( 'Saved browser benchmark: %1$s. Run again to refresh it.', 'wp-pow-captcha' ),
+        ) );
     }
 
     /**

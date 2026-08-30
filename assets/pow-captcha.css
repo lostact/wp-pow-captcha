@@ -6,6 +6,15 @@
     background: #f6f7f7;
 }
 
+.pow-captcha[dir="rtl"] {
+    direction: rtl;
+    text-align: right;
+}
+
+html[lang^="fa"] .pow-captcha {
+    font-family: "Vazirmatn", Tahoma, sans-serif;
+}
+
 .pow-progress {
     position: relative;
     height: 6px;
@@ -51,6 +60,30 @@
     width: 100%;
     background: #d63638;
     animation: none;
+}
+
+[data-pow-state="waiting"] .pow-progress span {
+    inset: 0;
+    width: 0;
+    animation: none;
+}
+
+.pow-interaction-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.pow-interaction-check input {
+    width: 20px;
+    height: 20px;
+    margin: 0;
 }
 
 @keyframes pow-progress {

@@ -64,6 +64,15 @@ class PoW_Captcha_Form_Protection {
     public function enqueue_assets() {
         $plugin_url = plugin_dir_url( dirname( __FILE__ ) );
 
+        if ( pow_captcha_is_persian() ) {
+            wp_enqueue_style(
+                'pow-captcha-vazirmatn',
+                'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap',
+                array(),
+                null
+            );
+        }
+
         wp_enqueue_style(
             'pow-captcha',
             $plugin_url . 'assets/pow-captcha.css',
@@ -80,9 +89,11 @@ class PoW_Captcha_Form_Protection {
         );
 
         wp_localize_script( 'pow-solver', 'powConfig', array(
-            'workerUrl'   => add_query_arg( 'ver', POW_CAPTCHA_VERSION, $plugin_url . 'assets/pow-worker.js' ),
-            'challengeUrl' => admin_url( 'admin-ajax.php?action=pow_captcha_challenge' ),
+            'workerUrl'       => add_query_arg( 'ver', POW_CAPTCHA_VERSION, $plugin_url . 'assets/pow-worker.js' ),
+            'challengeUrl'    => admin_url( 'admin-ajax.php?action=pow_captcha_challenge' ),
+            'interactionMode' => (string) get_option( 'pow_interaction_mode', 'automatic' ),
         ) );
+        wp_localize_script( 'pow-solver', 'powI18n', pow_captcha_frontend_translations() );
     }
 
     /**
@@ -90,7 +101,7 @@ class PoW_Captcha_Form_Protection {
      */
     public function inject_hidden_fields() {
         ?>
-        <div class="pow-captcha" data-pow-state="loading">
+        <div class="pow-captcha" data-pow-state="loading" dir="<?php echo esc_attr( pow_captcha_text_direction() ); ?>">
             <input type="hidden" name="_pow_challenge" value="">
             <input type="hidden" name="_pow_expires" value="">
             <input type="hidden" name="_pow_difficulty" value="">

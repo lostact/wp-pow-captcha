@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP PoW Captcha
  * Description: Protects configurable URLs and forms using a proof-of-work challenge system. No external dependencies, no third-party CAPTCHA services.
- * Version: 2.4.0
+ * Version: 2.5.2
  * Author: WP PoW Captcha
  * License: GPL-2.0-or-later
  * Text Domain: wp-pow-captcha
@@ -14,7 +14,53 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'POW_CAPTCHA_VERSION', '2.4.0' );
+define( 'POW_CAPTCHA_VERSION', '2.5.2' );
+
+/** Load bundled translations before plugin classes render any user-facing text. */
+function pow_captcha_load_textdomain() {
+    load_plugin_textdomain( 'wp-pow-captcha', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
+add_action( 'plugins_loaded', 'pow_captcha_load_textdomain', 1 );
+
+/** Return the correct writing direction, with an explicit Persian fallback. */
+function pow_captcha_text_direction(): string {
+    $locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+    return is_rtl() || 1 === preg_match( '/^(fa|ar|he|ur)(?:_|-)/i', (string) $locale ) ? 'rtl' : 'ltr';
+}
+
+/** Whether the active request locale is Persian. */
+function pow_captcha_is_persian(): bool {
+    $locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+    return 1 === preg_match( '/^fa(?:_|-)/i', (string) $locale );
+}
+
+/** Return translated strings shared by standard and early browser solvers. */
+function pow_captcha_frontend_translations(): array {
+    return array(
+        'measuring'               => __( 'measuring…', 'wp-pow-captcha' ),
+        'workerStartError'        => __( 'Unable to start the security worker.', 'wp-pow-captcha' ),
+        'checkRunError'           => __( 'The security check could not run.', 'wp-pow-captcha' ),
+        'browserError'            => __( 'The security check encountered a browser error. Please reload and try again.', 'wp-pow-captcha' ),
+        'inProgress'              => __( 'Security check in progress…', 'wp-pow-captcha' ),
+        'moveMouse'               => __( 'Move your mouse to begin the security check.', 'wp-pow-captcha' ),
+        'waitingInteraction'      => __( 'Waiting for genuine user interaction…', 'wp-pow-captcha' ),
+        'confirmHuman'            => __( 'Confirm that you are human to begin.', 'wp-pow-captcha' ),
+        'startsAfterConfirmation' => __( 'The proof-of-work check starts after confirmation.', 'wp-pow-captcha' ),
+        'verifyHuman'             => __( 'Verify you are human', 'wp-pow-captcha' ),
+        'workerNotConfigured'     => __( 'Error: security worker is not configured.', 'wp-pow-captcha' ),
+        'startingCheck'           => __( 'Starting security check…', 'wp-pow-captcha' ),
+        'startingWorker'          => __( 'Starting secure worker…', 'wp-pow-captcha' ),
+        'completeRedirecting'     => __( 'Security check complete. Redirecting…', 'wp-pow-captcha' ),
+        'passed'                  => __( 'Security check passed ✓', 'wp-pow-captcha' ),
+        'preparing'               => __( 'Preparing security check…', 'wp-pow-captcha' ),
+        'requestingChallenge'     => __( 'Requesting a fresh challenge…', 'wp-pow-captcha' ),
+        'unableToStart'           => __( 'Unable to start the security check. Reload the page and try again.', 'wp-pow-captcha' ),
+        'challengeRequestFailed'  => __( 'The fresh challenge request failed.', 'wp-pow-captcha' ),
+        'serviceNotConfigured'    => __( 'Security challenge service is not configured.', 'wp-pow-captcha' ),
+        'failedReload'            => __( 'Security check failed. Reload the page and try again.', 'wp-pow-captcha' ),
+        'stillPreparing'          => __( 'Please wait; the security check is still preparing or running…', 'wp-pow-captcha' ),
+    );
+}
 
 register_activation_hook( __FILE__, 'pow_captcha_activate' );
 register_deactivation_hook( __FILE__, 'pow_captcha_deactivate' );
@@ -42,6 +88,9 @@ function pow_captcha_activate() {
     }
     if ( false === get_option( 'pow_max_query_length' ) ) {
         add_option( 'pow_max_query_length', 0 );
+    }
+    if ( false === get_option( 'pow_interaction_mode' ) ) {
+        add_option( 'pow_interaction_mode', 'automatic' );
     }
     if ( false === get_option( 'pow_difficulty_schema' ) ) {
         add_option( 'pow_difficulty_schema', 2 );

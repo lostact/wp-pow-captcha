@@ -14,11 +14,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html <?php language_attributes(); ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo esc_html( get_bloginfo( 'name' ) ); ?> — Security Check</title>
+    <title><?php echo esc_html( sprintf( __( '%s — Security Check', 'wp-pow-captcha' ), get_bloginfo( 'name' ) ) ); ?></title>
+    <?php if ( pow_captcha_is_persian() ) : ?>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap">
+    <?php endif; ?>
     <style>
         * {
             margin: 0;
@@ -34,6 +39,9 @@ if ( ! defined( 'ABSPATH' ) ) {
             justify-content: center;
             min-height: 100vh;
             padding: 20px;
+        }
+        html[lang^="fa"] body {
+            font-family: "Vazirmatn", Tahoma, sans-serif;
         }
         .pow-container {
             background: #fff;
@@ -103,6 +111,23 @@ if ( ! defined( 'ABSPATH' ) ) {
             background: #d63638;
             animation: none;
         }
+        [data-pow-state="waiting"] .pow-progress span {
+            left: 0;
+            width: 0;
+            animation: none;
+        }
+        .pow-interaction-check {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px auto 0;
+            padding: 14px 16px;
+            border: 1px solid #8c8f94;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: start;
+        }
+        .pow-interaction-check input { width: 20px; height: 20px; margin: 0; }
         @keyframes pow-progress {
             from { left: -35%; }
             to { left: 100%; }
@@ -122,14 +147,14 @@ if ( ! defined( 'ABSPATH' ) ) {
     </style>
 </head>
 <body>
-    <div class="pow-container" data-pow-state="solving">
+    <div class="pow-container" data-pow-state="solving" dir="<?php echo esc_attr( pow_captcha_text_direction() ); ?>">
         <div class="pow-icon">🔒</div>
         <div class="site-name"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></div>
-        <h1>Checking your browser…</h1>
+        <h1><?php esc_html_e( 'Checking your browser…', 'wp-pow-captcha' ); ?></h1>
 
         <?php if ( ! empty( $error ) ) : ?>
             <div class="pow-error">
-                <?php esc_html_e( 'The previous security check failed. A new check is running automatically.', 'wp-pow-captcha' ); ?>
+                <?php esc_html_e( 'The previous security check failed. Complete the new check to try again.', 'wp-pow-captcha' ); ?>
             </div>
         <?php endif; ?>
 
@@ -145,6 +170,8 @@ if ( ! defined( 'ABSPATH' ) ) {
         window.powVersion    = <?php echo intval( $challenge['version'] ); ?>;
         window.powAlgorithm  = <?php echo wp_json_encode( $challenge['algorithm'] ); ?>;
         window.powSig        = <?php echo wp_json_encode( $challenge['signature'] ); ?>;
+        window.powInteractionMode = <?php echo wp_json_encode( $interaction_mode ); ?>;
+        window.powI18n       = <?php echo wp_json_encode( pow_captcha_frontend_translations() ); ?>;
         window.powWorkerUrl  = <?php echo wp_json_encode( add_query_arg( 'ver', POW_CAPTCHA_VERSION, plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-worker.js' ) ); ?>;
     </script>
     <script src="<?php echo esc_url( add_query_arg( 'ver', POW_CAPTCHA_VERSION, plugin_dir_url( dirname( __FILE__ ) ) . 'assets/pow-solver.js' ) ); ?>"></script>

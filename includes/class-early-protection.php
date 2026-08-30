@@ -11,6 +11,7 @@ class PoW_Captcha_Early_Protection {
 
     public const OPTION_ENABLED = 'pow_early_protection_enabled';
     public const OPTION_STATUS  = 'pow_early_protection_status';
+    public const OPTION_CONFIG_VERSION = 'pow_early_protection_config_version';
     public const MARKER         = 'WP PoW Captcha managed advanced-cache drop-in';
 
     /** Official Cloudflare HTTP proxy ranges. */
@@ -28,9 +29,16 @@ class PoW_Captcha_Early_Protection {
         add_action( 'update_option_pow_url_patterns', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_url_difficulty', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_max_query_length', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
+        add_action( 'update_option_pow_interaction_mode', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_expiry_time', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_blogname', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
+        add_action( 'update_option_WPLANG', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_secret_key', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
+
+        // Refresh generated translations and runtime data once after upgrades.
+        if ( get_option( self::OPTION_ENABLED, false ) && defined( 'POW_CAPTCHA_VERSION' ) && POW_CAPTCHA_VERSION !== get_option( self::OPTION_CONFIG_VERSION, '' ) ) {
+            self::write_config( true );
+        }
     }
 
     /** Enable or disable early protection from a sanitized setting value. */
@@ -122,6 +130,11 @@ class PoW_Captcha_Early_Protection {
 
     /** Write the standalone PHP configuration. */
     private static function write_config( bool $enabled ): bool {
+        $interaction_mode = (string) get_option( 'pow_interaction_mode', 'automatic' );
+        if ( ! in_array( $interaction_mode, array( 'automatic', 'mouse', 'checkbox' ), true ) ) {
+            $interaction_mode = 'automatic';
+        }
+
         $config = array(
             'schema'               => 1,
             'enabled'              => $enabled,
@@ -129,15 +142,32 @@ class PoW_Captcha_Early_Protection {
             'url_patterns'          => array_values( (array) get_option( 'pow_url_patterns', array() ) ),
             'url_difficulty'        => PoW_Captcha_Challenge::clamp_difficulty( (int) get_option( 'pow_url_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY ) ),
             'max_query_length'      => max( 0, min( 65535, (int) get_option( 'pow_max_query_length', 0 ) ) ),
+            'interaction_mode'      => $interaction_mode,
             'expiry_time'           => max( 30, min( 3600, (int) get_option( 'pow_expiry_time', 300 ) ) ),
             'site_name'             => wp_strip_all_tags( get_bloginfo( 'name' ) ),
+            'locale'                => get_locale(),
+            'text_direction'        => pow_captcha_text_direction(),
             'asset_url'             => plugin_dir_url( dirname( __FILE__ ) ) . 'assets',
-            'plugin_version'        => defined( 'POW_CAPTCHA_VERSION' ) ? POW_CAPTCHA_VERSION : '2.4.0',
+            'plugin_version'        => defined( 'POW_CAPTCHA_VERSION' ) ? POW_CAPTCHA_VERSION : '2.5.2',
+            'frontend_strings'      => pow_captcha_frontend_translations(),
+            'page_strings'          => array(
+                'title'       => __( '%s — Security Check', 'wp-pow-captcha' ),
+                'heading'     => __( 'Checking your browser…', 'wp-pow-captcha' ),
+                'retry'       => __( 'The previous security check failed. Complete the new check to try again.', 'wp-pow-captcha' ),
+                'progress'    => __( 'Security check in progress', 'wp-pow-captcha' ),
+                'please_wait' => __( 'Please wait while we verify your browser…', 'wp-pow-captcha' ),
+                'starting'    => __( 'Starting secure worker…', 'wp-pow-captcha' ),
+                'long_query'  => __( 'Request blocked: query string is too long.', 'wp-pow-captcha' ),
+            ),
             'trusted_proxy_ranges'  => array_values( (array) apply_filters( 'pow_captcha_trusted_proxy_ranges', self::CLOUDFLARE_RANGES ) ),
         );
 
         $contents = "<?php\n// WP PoW Captcha generated runtime configuration. Direct access returns data only.\nreturn " . var_export( $config, true ) . ";\n";
-        return self::atomic_write( self::config_path(), $contents );
+        $written  = self::atomic_write( self::config_path(), $contents );
+        if ( $written && defined( 'POW_CAPTCHA_VERSION' ) ) {
+            update_option( self::OPTION_CONFIG_VERSION, POW_CAPTCHA_VERSION, false );
+        }
+        return $written;
     }
 
     /** Build a stable loader that fails open during updates or missing files. */

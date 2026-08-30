@@ -4,13 +4,17 @@
 (function () {
     'use strict';
 
+    function translate(key, fallback) {
+        return window.powI18n && typeof window.powI18n[key] === 'string' ? window.powI18n[key] : fallback;
+    }
+
     function formatNumber(value) {
         return Math.max(0, Math.round(value || 0)).toLocaleString();
     }
 
     function formatRate(rate) {
         if (!isFinite(rate) || rate <= 0) {
-            return 'measuring…';
+            return translate('measuring', 'measuring…');
         }
         if (rate >= 1000000) {
             return (rate / 1000000).toFixed(2) + ' MH/s';
@@ -31,7 +35,7 @@
         try {
             worker = new Worker(workerUrl);
         } catch (error) {
-            callbacks.onError(error.message || 'Unable to start the security worker.');
+            callbacks.onError(translate('workerStartError', 'Unable to start the security worker.'));
             return null;
         }
 
@@ -47,12 +51,12 @@
                 return;
             }
             if (data.type === 'error') {
-                callbacks.onError(data.message || 'The security check could not run.');
+                callbacks.onError(translate('checkRunError', 'The security check could not run.'));
                 worker.terminate();
             }
         };
         worker.onerror = function () {
-            callbacks.onError('The security check encountered a browser error. Please reload and try again.');
+            callbacks.onError(translate('browserError', 'The security check encountered a browser error. Please reload and try again.'));
             worker.terminate();
         };
         worker.postMessage({
@@ -68,7 +72,7 @@
         var attempts = Number(data.attempts || 0);
         var rate = elapsed > 0 ? attempts / (elapsed / 1000) : 0;
         if (statusEl) {
-            statusEl.textContent = 'Security check in progress…';
+            statusEl.textContent = translate('inProgress', 'Security check in progress…');
         }
         if (detailsEl) {
             detailsEl.textContent = formatNumber(attempts) + ' attempts · ' + formatRate(rate) + ' · ' + formatElapsed(elapsed);
@@ -94,6 +98,65 @@
         document.cookie = cookie;
     }
 
+    function interactionMode(value) {
+        return value === 'mouse' || value === 'checkbox' ? value : 'automatic';
+    }
+
+    function waitForInteraction(container, mode, status, details, callback) {
+        mode = interactionMode(mode);
+        if (mode === 'automatic') {
+            callback();
+            return;
+        }
+
+        setState(container, 'waiting');
+        if (mode === 'mouse') {
+            if (status) {
+                status.textContent = translate('moveMouse', 'Move your mouse to begin the security check.');
+            }
+            if (details) {
+                details.textContent = translate('waitingInteraction', 'Waiting for genuine user interaction…');
+            }
+            var onMouseMove = function (event) {
+                if (!event.isTrusted) {
+                    return;
+                }
+                document.removeEventListener('mousemove', onMouseMove);
+                callback();
+            };
+            document.addEventListener('mousemove', onMouseMove, { passive: true });
+            return;
+        }
+
+        if (status) {
+            status.textContent = translate('confirmHuman', 'Confirm that you are human to begin.');
+        }
+        if (details) {
+            details.textContent = translate('startsAfterConfirmation', 'The proof-of-work check starts after confirmation.');
+        }
+        var label = document.createElement('label');
+        label.className = 'pow-interaction-check';
+        var checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.setAttribute('aria-label', translate('verifyHuman', 'Verify you are human'));
+        var text = document.createElement('span');
+        text.textContent = translate('verifyHuman', 'Verify you are human');
+        label.appendChild(checkbox);
+        label.appendChild(text);
+        var progress = container ? container.querySelector('.pow-progress') : null;
+        if (container) {
+            container.insertBefore(label, progress || null);
+        }
+        checkbox.addEventListener('change', function (event) {
+            if (!event.isTrusted || !checkbox.checked) {
+                return;
+            }
+            checkbox.disabled = true;
+            label.setAttribute('data-pow-confirmed', 'true');
+            callback();
+        });
+    }
+
     function runChallengePage() {
         if (typeof window.powChallenge === 'undefined') {
             return false;
@@ -108,43 +171,51 @@
 
         if (!workerUrl) {
             if (status) {
-                status.textContent = 'Error: security worker is not configured.';
+                status.textContent = translate('workerNotConfigured', 'Error: security worker is not configured.');
             }
             setState(container, 'error');
             return true;
         }
 
-        setState(container, 'solving');
-        solve(workerUrl, window.powChallenge, Number(window.powDifficulty), Number(window.powVersion || 1), {
-            onProgress: function (data) {
-                updateTelemetry(status, details, data);
-            },
-            onSolve: function (data) {
-                var value = [
-                    window.powChallenge,
-                    window.powExpires,
-                    window.powDifficulty,
-                    window.powVersion || 1,
-                    window.powAlgorithm || 'sha256',
-                    window.powSig,
-                    data.solution
-                ].join(':');
-                setCookie('pow_solution', value, 60);
-                setState(container, 'solved');
-                if (status) {
-                    status.textContent = 'Security check complete. Redirecting…';
-                }
-                if (details) {
-                    updateTelemetry(null, details, data);
-                }
-                setTimeout(function () { location.reload(); }, 300);
-            },
-            onError: function (message) {
-                setState(container, 'error');
-                if (status) {
-                    status.textContent = message;
-                }
+        waitForInteraction(container, window.powInteractionMode, status, details, function () {
+            setState(container, 'solving');
+            if (status) {
+                status.textContent = translate('startingCheck', 'Starting security check…');
             }
+            if (details) {
+                details.textContent = translate('startingWorker', 'Starting secure worker…');
+            }
+            solve(workerUrl, window.powChallenge, Number(window.powDifficulty), Number(window.powVersion || 1), {
+                onProgress: function (data) {
+                    updateTelemetry(status, details, data);
+                },
+                onSolve: function (data) {
+                    var value = [
+                        window.powChallenge,
+                        window.powExpires,
+                        window.powDifficulty,
+                        window.powVersion || 1,
+                        window.powAlgorithm || 'sha256',
+                        window.powSig,
+                        data.solution
+                    ].join(':');
+                    setCookie('pow_solution', value, 60);
+                    setState(container, 'solved');
+                    if (status) {
+                        status.textContent = translate('completeRedirecting', 'Security check complete. Redirecting…');
+                    }
+                    if (details) {
+                        updateTelemetry(null, details, data);
+                    }
+                    setTimeout(function () { location.reload(); }, 300);
+                },
+                onError: function (message) {
+                    setState(container, 'error');
+                    if (status) {
+                        status.textContent = message;
+                    }
+                }
+            });
         });
         return true;
     }
@@ -186,7 +257,7 @@
             onSolve: function (data) {
                 solutionField.value = data.solution;
                 if (status) {
-                    status.textContent = 'Security check passed ✓';
+                    status.textContent = translate('passed', 'Security check passed ✓');
                 }
                 if (details) {
                     updateTelemetry(null, details, data);
@@ -219,6 +290,14 @@
         var separator = challengeUrl.indexOf('?') === -1 ? '?' : '&';
         var url = challengeUrl + separator + '_pow_cache_bust=' + encodeURIComponent(Date.now() + '-' + Math.random());
 
+        setState(element, 'loading');
+        if (status) {
+            status.textContent = translate('preparing', 'Preparing security check…');
+        }
+        if (details) {
+            details.textContent = translate('requestingChallenge', 'Requesting a fresh challenge…');
+        }
+
         fetch(url, {
             method: 'GET',
             credentials: 'same-origin',
@@ -237,10 +316,10 @@
         }).catch(function () {
             setState(element, 'error');
             if (status) {
-                status.textContent = 'Unable to start the security check. Reload the page and try again.';
+                status.textContent = translate('unableToStart', 'Unable to start the security check. Reload the page and try again.');
             }
             if (details) {
-                details.textContent = 'The fresh challenge request failed.';
+                details.textContent = translate('challengeRequestFailed', 'The fresh challenge request failed.');
             }
         });
     }
@@ -262,14 +341,20 @@
                 setState(captcha, 'error');
                 var status = captcha.querySelector('.pow-status');
                 if (status) {
-                    status.textContent = 'Security challenge service is not configured.';
+                    status.textContent = translate('serviceNotConfigured', 'Security challenge service is not configured.');
                 }
             });
             return;
         }
 
         captchas.forEach(function (captcha) {
-            requestFormChallenge(captcha, workerUrl, challengeUrl);
+            waitForInteraction(
+                captcha,
+                window.powConfig ? window.powConfig.interactionMode : 'automatic',
+                captcha.querySelector('.pow-status'),
+                captcha.querySelector('.pow-details'),
+                function () { requestFormChallenge(captcha, workerUrl, challengeUrl); }
+            );
         });
 
         document.addEventListener('submit', function (event) {
@@ -285,8 +370,8 @@
             var status = captcha.querySelector('.pow-status');
             if (status) {
                 status.textContent = captcha.getAttribute('data-pow-state') === 'error'
-                    ? 'Security check failed. Reload the page and try again.'
-                    : 'Please wait; the security check is still preparing or running…';
+                    ? translate('failedReload', 'Security check failed. Reload the page and try again.')
+                    : translate('stillPreparing', 'Please wait; the security check is still preparing or running…');
             }
         }, true);
     });

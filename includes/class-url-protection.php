@@ -172,6 +172,10 @@ class PoW_Captcha_URL_Protection {
         $difficulty = (int) get_option( 'pow_url_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
         $difficulty = PoW_Captcha_Challenge::clamp_difficulty( $difficulty );
         $challenge  = $this->challenge->generate( $difficulty );
+        $interaction_mode = (string) get_option( 'pow_interaction_mode', 'automatic' );
+        if ( ! in_array( $interaction_mode, array( 'automatic', 'mouse', 'checkbox' ), true ) ) {
+            $interaction_mode = 'automatic';
+        }
 
         $is_secure = is_ssl();
 

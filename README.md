@@ -11,6 +11,9 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 - Optionally reject oversized query strings only on regex-matched protected URLs.
 - Fine-grained difficulty control with small, predictable increments.
 - Browser progress indicator with attempts, hash rate, and elapsed time.
+- Automatic, genuine mouse-movement, or verification-checkbox challenge triggers.
+- Complete Persian (`fa_IR`) translation for admin screens, forms, standard challenges, and the early gateway.
+- Persian CAPTCHA interfaces use the Vazirmatn font from Google Fonts, with a local fallback when it is unavailable.
 - Admin benchmark and estimated solve-time table.
 - Stateless HMAC-signed challenges with server-enforced expiration.
 - Challenges and URL clearance are bound to the visitor IP.

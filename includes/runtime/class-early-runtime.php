@@ -38,7 +38,9 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
 
             $maximum_query_length = isset( $config['max_query_length'] ) ? self::clamp( (int) $config['max_query_length'], 0, 65535 ) : 0;
             if ( $maximum_query_length > 0 && self::query_string_length( $request_uri ) > $maximum_query_length ) {
-                self::block_long_query();
+                $page_strings = isset( $config['page_strings'] ) && is_array( $config['page_strings'] ) ? $config['page_strings'] : array();
+                $message      = isset( $page_strings['long_query'] ) ? (string) $page_strings['long_query'] : 'Request blocked: query string is too long.';
+                self::block_long_query( $message );
             }
 
             $secret = (string) $config['secret_key'];
@@ -81,7 +83,7 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
         }
 
         /** Emit a minimal response for an oversized matching query. */
-        private static function block_long_query(): void {
+        private static function block_long_query( string $message ): void {
             if ( ! headers_sent() ) {
                 http_response_code( 414 );
                 header( 'Content-Type: text/plain; charset=UTF-8' );
@@ -89,7 +91,7 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
                 header( 'Pragma: no-cache' );
                 header( 'X-Robots-Tag: noindex, nofollow', true );
             }
-            echo 'Request blocked: query string is too long.';
+            echo $message;
             exit;
         }
 
@@ -213,8 +215,23 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
             $payload    = implode( ':', array( self::VERSION, self::ALGORITHM, $challenge, $expires, $difficulty, $ip ) );
             $signature  = hash_hmac( 'sha256', $payload, $secret );
             $site_name  = isset( $config['site_name'] ) ? (string) $config['site_name'] : 'Website';
+            $locale     = isset( $config['locale'] ) ? str_replace( '_', '-', (string) $config['locale'] ) : 'en-US';
+            $direction  = isset( $config['text_direction'] ) && 'rtl' === $config['text_direction'] ? 'rtl' : 'ltr';
+            $is_persian = 1 === preg_match( '/^fa(?:_|-)/i', $locale );
             $asset_url  = isset( $config['asset_url'] ) ? rtrim( (string) $config['asset_url'], '/' ) : '';
             $version    = isset( $config['plugin_version'] ) ? (string) $config['plugin_version'] : '1';
+            $interaction_mode = isset( $config['interaction_mode'] ) ? (string) $config['interaction_mode'] : 'automatic';
+            if ( ! in_array( $interaction_mode, array( 'automatic', 'mouse', 'checkbox' ), true ) ) {
+                $interaction_mode = 'automatic';
+            }
+            $frontend_strings = isset( $config['frontend_strings'] ) && is_array( $config['frontend_strings'] ) ? $config['frontend_strings'] : array();
+            $page_strings     = isset( $config['page_strings'] ) && is_array( $config['page_strings'] ) ? $config['page_strings'] : array();
+            $page_title       = isset( $page_strings['title'] ) ? str_replace( '%s', $site_name, (string) $page_strings['title'] ) : $site_name . ' — Security Check';
+            $heading          = isset( $page_strings['heading'] ) ? (string) $page_strings['heading'] : 'Checking your browser…';
+            $retry            = isset( $page_strings['retry'] ) ? (string) $page_strings['retry'] : 'The previous security check failed. Complete the new check to try again.';
+            $progress_label   = isset( $page_strings['progress'] ) ? (string) $page_strings['progress'] : 'Security check in progress';
+            $please_wait      = isset( $page_strings['please_wait'] ) ? (string) $page_strings['please_wait'] : 'Please wait while we verify your browser…';
+            $starting         = isset( $page_strings['starting'] ) ? (string) $page_strings['starting'] : 'Starting secure worker…';
 
             if ( '' === $asset_url ) {
                 return;
@@ -233,13 +250,14 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
             $solver_url = $asset_url . '/pow-solver.js?ver=' . rawurlencode( $version );
             ?>
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title><?php echo self::escape( $site_name ); ?> — Security Check</title>
-<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#f0f0f1;color:#1d2327;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}.pow-container{width:100%;max-width:500px;padding:40px;text-align:center;background:#fff;border:1px solid #c3c4c7;border-radius:4px;box-shadow:0 1px 3px #0002}.pow-icon{font-size:48px}.site-name{margin:8px 0 24px;color:#646970}.pow-container h1{font-size:1.3em}.pow-progress{position:relative;height:8px;margin-top:22px;overflow:hidden;border-radius:99px;background:#dcdcde}.pow-progress span{position:absolute;inset:0 auto 0 -35%;width:35%;border-radius:inherit;background:#2271b1;animation:p 1.15s ease-in-out infinite}[data-pow-state=solved] .pow-progress span{left:0;width:100%;background:#00a32a;animation:none}[data-pow-state=error] .pow-progress span{left:0;width:100%;background:#d63638;animation:none}@keyframes p{to{left:100%}}#pow-status{margin:16px 0 0;font-weight:600;color:#50575e}#pow-details{min-height:1.5em;margin-top:6px;font-size:.8em;color:#646970}.pow-error{margin-bottom:20px;padding:12px;color:#b32d2e;background:#fcf0f1;border:1px solid #d63638;border-radius:4px}</style></head>
-<body><main class="pow-container" data-pow-state="solving"><div class="pow-icon">&#128274;</div><div class="site-name"><?php echo self::escape( $site_name ); ?></div><h1>Checking your browser…</h1>
-<?php if ( $error ) : ?><div class="pow-error">The previous security check failed. A new check is running automatically.</div><?php endif; ?>
-<div class="pow-progress" role="progressbar" aria-label="Security check in progress" aria-busy="true"><span></span></div><p id="pow-status" role="status" aria-live="polite">Please wait while we verify your browser…</p><p id="pow-details">Starting secure worker…</p></main>
-<script>window.powChallenge=<?php echo json_encode( $challenge, $json_flags ); ?>;window.powExpires=<?php echo (int) $expires; ?>;window.powDifficulty=<?php echo (int) $difficulty; ?>;window.powVersion=<?php echo self::VERSION; ?>;window.powAlgorithm=<?php echo json_encode( self::ALGORITHM, $json_flags ); ?>;window.powSig=<?php echo json_encode( $signature, $json_flags ); ?>;window.powWorkerUrl=<?php echo json_encode( $worker_url, $json_flags ); ?>;</script>
+<html lang="<?php echo self::escape( $locale ); ?>" dir="<?php echo $direction; ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title><?php echo self::escape( $page_title ); ?></title>
+<?php if ( $is_persian ) : ?><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap"><?php endif; ?>
+<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#f0f0f1;color:#1d2327;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}html[lang^=fa] body{font-family:"Vazirmatn",Tahoma,sans-serif}.pow-container{width:100%;max-width:500px;padding:40px;text-align:center;background:#fff;border:1px solid #c3c4c7;border-radius:4px;box-shadow:0 1px 3px #0002}.pow-icon{font-size:48px}.site-name{margin:8px 0 24px;color:#646970}.pow-container h1{font-size:1.3em}.pow-progress{position:relative;height:8px;margin-top:22px;overflow:hidden;border-radius:99px;background:#dcdcde}.pow-progress span{position:absolute;inset:0 auto 0 -35%;width:35%;border-radius:inherit;background:#2271b1;animation:p 1.15s ease-in-out infinite}[data-pow-state=solved] .pow-progress span{left:0;width:100%;background:#00a32a;animation:none}[data-pow-state=error] .pow-progress span{left:0;width:100%;background:#d63638;animation:none}[data-pow-state=waiting] .pow-progress span{left:0;width:0;animation:none}.pow-interaction-check{display:flex;align-items:center;gap:12px;margin:20px auto 0;padding:14px 16px;border:1px solid #8c8f94;border-radius:4px;cursor:pointer;text-align:start}.pow-interaction-check input{width:20px;height:20px;margin:0}@keyframes p{to{left:100%}}#pow-status{margin:16px 0 0;font-weight:600;color:#50575e}#pow-details{min-height:1.5em;margin-top:6px;font-size:.8em;color:#646970}.pow-error{margin-bottom:20px;padding:12px;color:#b32d2e;background:#fcf0f1;border:1px solid #d63638;border-radius:4px}</style></head>
+<body><main class="pow-container" data-pow-state="solving" dir="<?php echo $direction; ?>"><div class="pow-icon">&#128274;</div><div class="site-name"><?php echo self::escape( $site_name ); ?></div><h1><?php echo self::escape( $heading ); ?></h1>
+<?php if ( $error ) : ?><div class="pow-error"><?php echo self::escape( $retry ); ?></div><?php endif; ?>
+<div class="pow-progress" role="progressbar" aria-label="<?php echo self::escape( $progress_label ); ?>" aria-busy="true"><span></span></div><p id="pow-status" role="status" aria-live="polite"><?php echo self::escape( $please_wait ); ?></p><p id="pow-details"><?php echo self::escape( $starting ); ?></p></main>
+<script>window.powChallenge=<?php echo json_encode( $challenge, $json_flags ); ?>;window.powExpires=<?php echo (int) $expires; ?>;window.powDifficulty=<?php echo (int) $difficulty; ?>;window.powVersion=<?php echo self::VERSION; ?>;window.powAlgorithm=<?php echo json_encode( self::ALGORITHM, $json_flags ); ?>;window.powSig=<?php echo json_encode( $signature, $json_flags ); ?>;window.powInteractionMode=<?php echo json_encode( $interaction_mode, $json_flags ); ?>;window.powI18n=<?php echo json_encode( $frontend_strings, $json_flags ); ?>;window.powWorkerUrl=<?php echo json_encode( $worker_url, $json_flags ); ?>;</script>
 <script src="<?php echo self::escape( $solver_url ); ?>"></script></body></html>
             <?php
             exit;

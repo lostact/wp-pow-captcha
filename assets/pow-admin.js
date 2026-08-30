@@ -4,6 +4,17 @@
 (function () {
     'use strict';
 
+    function translate(key, fallback) {
+        return window.powAdminI18n && typeof window.powAdminI18n[key] === 'string' ? window.powAdminI18n[key] : fallback;
+    }
+
+    function interpolate(template) {
+        var values = Array.prototype.slice.call(arguments, 1);
+        return values.reduce(function (text, value, index) {
+            return text.replace(new RegExp('%' + (index + 1) + '\\$s', 'g'), value);
+        }, template);
+    }
+
     var STORAGE_KEY = 'wpPowCaptchaHashRateV2';
     var worker = null;
     var rejectActiveSolve = null;
@@ -24,7 +35,7 @@
 
     function formatRate(rate) {
         if (!isFinite(rate) || rate <= 0) {
-            return 'Not measured';
+            return translate('notMeasured', 'Not measured');
         }
         if (rate >= 1000000) {
             return (rate / 1000000).toFixed(2) + ' MH/s';
@@ -103,9 +114,9 @@
                 var value = clampDifficulty(source.value);
                 range.value = value;
                 number.value = value;
-                var text = '≈ ' + formatInteger(expectedHashes(value)) + ' expected hashes';
+                var text = interpolate(translate('expectedHashesPreview', '≈ %1$s expected hashes'), formatInteger(expectedHashes(value)));
                 if (measuredRate > 0) {
-                    text += ' · ' + formatDuration(expectedHashes(value) / measuredRate) + ' on this browser';
+                    text += ' · ' + interpolate(translate('onThisBrowser', '%1$s on this browser'), formatDuration(expectedHashes(value) / measuredRate));
                 }
                 preview.textContent = text;
             }
@@ -125,13 +136,13 @@
         var work = expectedHashes(difficulty);
         var profiles = [];
         if (measuredRate > 0) {
-            profiles.push({ name: 'This browser (measured)', rate: measuredRate, measured: true });
+            profiles.push({ name: translate('thisBrowser', 'This browser (measured)'), rate: measuredRate, measured: true });
         }
         profiles.push(
-            { name: 'Low-end mobile', rate: 25000 },
-            { name: 'Typical mobile', rate: 75000 },
-            { name: 'Typical laptop', rate: 200000 },
-            { name: 'Fast desktop', rate: 500000 }
+            { name: translate('lowEndMobile', 'Low-end mobile'), rate: 25000 },
+            { name: translate('typicalMobile', 'Typical mobile'), rate: 75000 },
+            { name: translate('typicalLaptop', 'Typical laptop'), rate: 200000 },
+            { name: translate('fastDesktop', 'Fast desktop'), rate: 500000 }
         );
 
         body.innerHTML = '';
@@ -161,16 +172,16 @@
         terminateWorker();
         cancelled = false;
         setBusy(card, true);
-        status.textContent = 'Benchmarking SHA-256 throughput…';
+        status.textContent = translate('benchmarkingThroughput', 'Benchmarking SHA-256 throughput…');
         worker = new Worker(card.getAttribute('data-worker-url'));
         worker.onmessage = function (event) {
             var data = event.data || {};
             if (data.type === 'benchmark-progress') {
-                status.textContent = 'Benchmarking… ' + formatInteger(data.attempts) + ' hashes sampled';
+                status.textContent = interpolate(translate('benchmarkingHashes', 'Benchmarking… %1$s hashes sampled'), formatInteger(data.attempts));
             } else if (data.type === 'benchmark-result') {
                 measuredRate = Number(data.hashRate) || 0;
                 storeRate(measuredRate);
-                status.textContent = 'This browser measured ' + formatRate(measuredRate) + ' across ' + formatInteger(data.attempts) + ' hashes.';
+                status.textContent = interpolate(translate('browserMeasured', 'This browser measured %1$s across %2$s hashes.'), formatRate(measuredRate), formatInteger(data.attempts));
                 terminateWorker();
                 setBusy(card, false);
                 updateDifficultyControls();
@@ -178,7 +189,7 @@
             }
         };
         worker.onerror = function () {
-            status.textContent = 'Benchmark worker failed. Check browser worker support and try again.';
+            status.textContent = translate('benchmarkFailed', 'Benchmark worker failed. Check browser worker support and try again.');
             terminateWorker();
             setBusy(card, false);
         };
@@ -207,7 +218,7 @@
             worker.onerror = function () {
                 rejectActiveSolve = null;
                 terminateWorker();
-                reject(new Error('Solve worker failed.'));
+                reject(new Error(translate('solveWorkerFailed', 'Solve worker failed.')));
             };
             worker.postMessage({
                 challenge: randomChallenge(),
@@ -235,11 +246,11 @@
         try {
             for (var index = 0; index < runs; index++) {
                 if (cancelled) {
-                    throw new Error('Test cancelled.');
+                    throw new Error(translate('testCancelled', 'Test cancelled.'));
                 }
-                status.textContent = 'Solve ' + (index + 1) + ' of ' + runs + ' at difficulty ' + difficulty + '…';
+                status.textContent = interpolate(translate('solveAtDifficulty', 'Solve %1$s of %2$s at difficulty %3$s…'), index + 1, runs, difficulty);
                 var sample = await solveOnce(card.getAttribute('data-worker-url'), difficulty, function (progress) {
-                    status.textContent = 'Solve ' + (index + 1) + ' of ' + runs + ': ' + formatInteger(progress.attempts) + ' attempts · ' + formatDuration(progress.elapsed / 1000);
+                    status.textContent = interpolate(translate('solveProgress', 'Solve %1$s of %2$s: %3$s attempts · %4$s'), index + 1, runs, formatInteger(progress.attempts), formatDuration(progress.elapsed / 1000));
                 });
                 samples.push(sample);
             }
@@ -249,17 +260,17 @@
             var totalAttempts = attempts.reduce(function (sum, value) { return sum + value; }, 0);
             var totalSeconds = times.reduce(function (sum, value) { return sum + value; }, 0);
             var actualRate = totalSeconds > 0 ? totalAttempts / totalSeconds : 0;
-            status.textContent = 'Completed ' + runs + ' real solve' + (runs === 1 ? '' : 's') + ' at difficulty ' + difficulty + '.';
-            results.innerHTML = '<table class="widefat striped"><thead><tr><th>Statistic</th><th>Solve time</th></tr></thead><tbody>' +
-                '<tr><td>Minimum</td><td>' + formatDuration(Math.min.apply(null, times)) + '</td></tr>' +
-                '<tr><td>Median</td><td>' + formatDuration(median(times)) + '</td></tr>' +
-                '<tr><td>Average</td><td>' + formatDuration(totalSeconds / runs) + '</td></tr>' +
-                '<tr><td>Maximum</td><td>' + formatDuration(Math.max.apply(null, times)) + '</td></tr>' +
-                '<tr><td>Total attempts</td><td>' + formatInteger(totalAttempts) + '</td></tr>' +
-                '<tr><td>Observed hash rate</td><td>' + formatRate(actualRate) + '</td></tr>' +
+            status.textContent = interpolate(translate('completedSolves', 'Completed %1$s real solves at difficulty %2$s.'), runs, difficulty);
+            results.innerHTML = '<table class="widefat striped"><thead><tr><th>' + translate('statistic', 'Statistic') + '</th><th>' + translate('solveTime', 'Solve time') + '</th></tr></thead><tbody>' +
+                '<tr><td>' + translate('minimum', 'Minimum') + '</td><td>' + formatDuration(Math.min.apply(null, times)) + '</td></tr>' +
+                '<tr><td>' + translate('median', 'Median') + '</td><td>' + formatDuration(median(times)) + '</td></tr>' +
+                '<tr><td>' + translate('average', 'Average') + '</td><td>' + formatDuration(totalSeconds / runs) + '</td></tr>' +
+                '<tr><td>' + translate('maximum', 'Maximum') + '</td><td>' + formatDuration(Math.max.apply(null, times)) + '</td></tr>' +
+                '<tr><td>' + translate('totalAttempts', 'Total attempts') + '</td><td>' + formatInteger(totalAttempts) + '</td></tr>' +
+                '<tr><td>' + translate('observedHashRate', 'Observed hash rate') + '</td><td>' + formatRate(actualRate) + '</td></tr>' +
                 '</tbody></table>';
         } catch (error) {
-            status.textContent = error.message || 'Solve test failed.';
+            status.textContent = error.message || translate('solveTestFailed', 'Solve test failed.');
         } finally {
             terminateWorker();
             setBusy(card, false);
@@ -277,7 +288,7 @@
         var results = document.getElementById('pow-solve-results');
         var difficulty = document.getElementById('pow-test-difficulty');
         if (measuredRate > 0) {
-            status.textContent = 'Saved browser benchmark: ' + formatRate(measuredRate) + '. Run again to refresh it.';
+            status.textContent = interpolate(translate('savedBenchmark', 'Saved browser benchmark: %1$s. Run again to refresh it.'), formatRate(measuredRate));
         }
         renderEstimateTable(clampDifficulty(difficulty.value));
 
@@ -296,10 +307,10 @@
             if (rejectActiveSolve) {
                 var reject = rejectActiveSolve;
                 rejectActiveSolve = null;
-                reject(new Error('Test cancelled.'));
+                reject(new Error(translate('testCancelled', 'Test cancelled.')));
             }
             terminateWorker();
-            status.textContent = 'Test cancelled.';
+            status.textContent = translate('testCancelled', 'Test cancelled.');
             setBusy(card, false);
         });
     });
