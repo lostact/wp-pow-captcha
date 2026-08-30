@@ -285,7 +285,7 @@
             onSolve: function (data) {
                 solutionField.value = data.solution;
                 if (status) {
-                    status.textContent = translate('passed', 'Security check passed ✓');
+                    status.textContent = translate('passed', 'Security check passed');
                 }
                 if (details) {
                     updateTelemetry(null, details, data);

@@ -4,7 +4,7 @@ Tags: captcha, proof of work, anti-spam, security, login
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.8
+Stable tag: 2.5.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -84,7 +84,7 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 
 == Changelog ==
 
-= 2.5.8 =
+= 2.5.10 =
 
 * Added automatic, genuine mouse-movement, and verification-checkbox challenge triggers.
 * Added configurable long-query blocking for regex-matched protected URLs.
@@ -95,6 +95,6 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 
 == Upgrade Notice ==
 
-= 2.5.8 =
+= 2.5.10 =
 
 Adds interaction-based challenge triggers, long-query protection, Persian localization, and RTL support.

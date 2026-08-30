@@ -5,7 +5,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Proof of Work Captcha 2.5.8\n"
+"Project-Id-Version: Proof of Work Captcha 2.5.10\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-30 14:14+0330\n"
 "PO-Revision-Date: 2026-08-30 10:45+0000\n"
@@ -428,8 +428,8 @@ msgid "Security check in progress…"
 msgstr "بررسی امنیتی در حال انجام است…"
 
 #: proof-of-work-captcha.php:42
-msgid "Security check passed ✓"
-msgstr "بررسی امنیتی تأیید شد ✓"
+msgid "Security check passed"
+msgstr "بررسی امنیتی تأیید شد"
 
 #: includes/class-admin.php:342
 msgid "Setup incomplete:"

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Proof of Work Captcha
  * Description: Protects configurable URLs and forms using a proof-of-work challenge system. No external dependencies, no third-party CAPTCHA services.
- * Version: 2.5.8
+ * Version: 2.5.10
  * Author: Proof of Work Captcha
  * License: GPL-2.0-or-later
  * Text Domain: proof-of-work-captcha
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'POW_CAPTCHA_VERSION', '2.5.8' );
+define( 'POW_CAPTCHA_VERSION', '2.5.10' );
 
 /** Load the bundled locale catalog when WordPress has no language pack loaded. */
 function pow_captcha_load_bundled_translation(): void {
@@ -58,7 +58,7 @@ function pow_captcha_frontend_translations(): array {
         'startingCheck'           => __( 'Starting security check…', 'proof-of-work-captcha' ),
         'startingWorker'          => __( 'Starting secure worker…', 'proof-of-work-captcha' ),
         'completeRedirecting'     => __( 'Security check complete. Redirecting…', 'proof-of-work-captcha' ),
-        'passed'                  => __( 'Security check passed ✓', 'proof-of-work-captcha' ),
+        'passed'                  => __( 'Security check passed', 'proof-of-work-captcha' ),
         'preparing'               => __( 'Preparing security check…', 'proof-of-work-captcha' ),
         'requestingChallenge'     => __( 'Requesting a fresh challenge…', 'proof-of-work-captcha' ),
         'unableToStart'           => __( 'Unable to start the security check. Reload the page and try again.', 'proof-of-work-captcha' ),

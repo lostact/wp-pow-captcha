@@ -1,13 +1,12 @@
 .pow-captcha {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    margin: 24px 0 20px;
-    padding: 20px;
-    border: 1px solid #dcdcde;
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 3px 14px rgba(30, 35, 40, 0.06);
+    gap: 12px;
+    margin: 20px 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .pow-captcha [hidden] {
@@ -83,13 +82,13 @@ html[lang^="fa"] .pow-captcha {
     align-items: center;
     justify-content: flex-start;
     gap: 14px;
-    min-height: 58px;
+    min-height: 0;
     margin: 0;
-    padding: 14px 16px;
+    padding: 8px 0;
     color: #1d2327;
-    background: #f8f9fa;
-    border: 2px solid #8c8f94;
-    border-radius: 8px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
     cursor: pointer;
     font-size: 15px;
     font-weight: 600;
@@ -117,9 +116,8 @@ html[lang^="fa"] .pow-captcha {
 
 .pow-captcha .pow-interaction-check:hover,
 .pow-captcha .pow-interaction-check:focus-within {
-    background: #f0f6fc;
-    border-color: #2271b1;
-    box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.14);
+    background: transparent;
+    box-shadow: none;
 }
 
 .pow-captcha .pow-interaction-check input[type="checkbox"] {
@@ -144,5 +142,5 @@ html[lang^="fa"] .pow-captcha {
 }
 
 @media (max-width: 420px) {
-    .pow-captcha { padding: 16px; }
+    .pow-captcha { margin: 16px 0; }
 }
