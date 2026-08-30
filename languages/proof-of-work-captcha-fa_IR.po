@@ -5,7 +5,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Proof of Work Captcha 2.5.7\n"
+"Project-Id-Version: Proof of Work Captcha 2.5.8\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-30 14:14+0330\n"
 "PO-Revision-Date: 2026-08-30 10:45+0000\n"
@@ -241,8 +241,8 @@ msgid "Hash rate"
 msgstr "نرخ هش"
 
 #: includes/class-admin.php:367
-msgid "Login Form"
-msgstr "فرم ورود"
+msgid "WordPress Login Form"
+msgstr "فرم ورود وردپرس"
 
 #: includes/class-admin.php:538
 msgid "Low-end mobile"
@@ -347,8 +347,14 @@ msgid "Protected Forms"
 msgstr "فرم‌های محافظت‌شده"
 
 #: includes/class-admin.php:369
-msgid "Registration Form"
-msgstr "فرم نام‌نویسی"
+msgid "WordPress Registration Form"
+msgstr "فرم نام‌نویسی وردپرس"
+
+msgid "WooCommerce My Account Login"
+msgstr "ورود حساب کاربری ووکامرس"
+
+msgid "WooCommerce My Account Registration"
+msgstr "نام‌نویسی حساب کاربری ووکامرس"
 
 #: includes/class-url-protection.php:162
 msgid "Request blocked: query string is too long."

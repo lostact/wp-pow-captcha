@@ -214,7 +214,7 @@ class PoW_Captcha_Admin {
      * @return array Sanitized array of allowed form types.
      */
     public function sanitize_protected_forms( $input ): array {
-        $allowed = array( 'login', 'comment', 'register' );
+        $allowed = array( 'login', 'comment', 'register', 'woocommerce_login', 'woocommerce_register' );
 
         if ( ! is_array( $input ) ) {
             return array();
@@ -394,9 +394,11 @@ class PoW_Captcha_Admin {
         }
 
         $forms = array(
-            'login'    => __( 'Login Form', 'proof-of-work-captcha' ),
-            'comment'  => __( 'Comment Form', 'proof-of-work-captcha' ),
-            'register' => __( 'Registration Form', 'proof-of-work-captcha' ),
+            'login'                => __( 'WordPress Login Form', 'proof-of-work-captcha' ),
+            'comment'              => __( 'Comment Form', 'proof-of-work-captcha' ),
+            'register'             => __( 'WordPress Registration Form', 'proof-of-work-captcha' ),
+            'woocommerce_login'    => __( 'WooCommerce My Account Login', 'proof-of-work-captcha' ),
+            'woocommerce_register' => __( 'WooCommerce My Account Registration', 'proof-of-work-captcha' ),
         );
 
         foreach ( $forms as $value => $label ) {

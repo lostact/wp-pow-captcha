@@ -49,6 +49,16 @@ class PoW_Captcha_Form_Protection {
             add_action( 'login_enqueue_scripts', array( $this, 'enqueue_assets' ) );
         }
 
+        if ( in_array( 'woocommerce_login', $protected_forms, true ) ) {
+            add_action( 'woocommerce_login_form', array( $this, 'inject_hidden_fields' ) );
+            add_filter( 'woocommerce_process_login_errors', array( $this, 'verify_woocommerce_login' ), 10, 3 );
+        }
+
+        if ( in_array( 'woocommerce_register', $protected_forms, true ) ) {
+            add_action( 'woocommerce_register_form', array( $this, 'inject_hidden_fields' ) );
+            add_filter( 'woocommerce_registration_errors', array( $this, 'verify_registration' ), 10, 3 );
+        }
+
         // Enqueue front-end assets and expose a deliberately uncached challenge
         // endpoint when any form protection is active.
         if ( ! empty( $protected_forms ) ) {
@@ -216,6 +226,22 @@ class PoW_Captcha_Form_Protection {
      * @return WP_Error
      */
     public function verify_registration( WP_Error $errors, string $login, string $email ): WP_Error {
+        if ( ! $this->verify_from_post() ) {
+            $errors->add( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-captcha' ) );
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Verify a WooCommerce My Account login before password authentication.
+     *
+     * @param WP_Error $errors   Current WooCommerce login errors.
+     * @param string   $username Submitted username or email address.
+     * @param string   $password Submitted password.
+     * @return WP_Error
+     */
+    public function verify_woocommerce_login( WP_Error $errors, string $username, string $password ): WP_Error {
         if ( ! $this->verify_from_post() ) {
             $errors->add( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-captcha' ) );
         }

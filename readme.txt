@@ -4,7 +4,7 @@ Tags: captcha, proof of work, anti-spam, security, login
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.7
+Stable tag: 2.5.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,6 +19,7 @@ Challenge generation and verification run on your site. No CAPTCHA account, API 
 = Features =
 
 * Protect login, registration, and comment forms.
+* Protect WooCommerce My Account login and registration forms independently.
 * Protect URLs selected with regular-expression patterns.
 * Choose automatic, mouse-movement, or verification-checkbox challenge triggers.
 * Configure separate proof-of-work difficulty for forms and URLs.
@@ -83,7 +84,7 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 
 == Changelog ==
 
-= 2.5.7 =
+= 2.5.8 =
 
 * Added automatic, genuine mouse-movement, and verification-checkbox challenge triggers.
 * Added configurable long-query blocking for regex-matched protected URLs.
@@ -94,6 +95,6 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 
 == Upgrade Notice ==
 
-= 2.5.7 =
+= 2.5.8 =
 
 Adds interaction-based challenge triggers, long-query protection, Persian localization, and RTL support.

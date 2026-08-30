@@ -4,7 +4,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Proof of Work Captcha 2.5.7\n"
+"Project-Id-Version: Proof of Work Captcha 2.5.8\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-30 14:14+0330\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
@@ -231,7 +231,7 @@ msgid "Hash rate"
 msgstr ""
 
 #: includes/class-admin.php:367
-msgid "Login Form"
+msgid "WordPress Login Form"
 msgstr ""
 
 #: includes/class-admin.php:538
@@ -330,7 +330,13 @@ msgid "Protected Forms"
 msgstr ""
 
 #: includes/class-admin.php:369
-msgid "Registration Form"
+msgid "WordPress Registration Form"
+msgstr ""
+
+msgid "WooCommerce My Account Login"
+msgstr ""
+
+msgid "WooCommerce My Account Registration"
 msgstr ""
 
 #: includes/class-url-protection.php:162
