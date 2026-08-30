@@ -69,7 +69,7 @@ class PoW_Captcha_Form_Protection {
                 'pow-captcha-vazirmatn',
                 'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap',
                 array(),
-                null
+                POW_CAPTCHA_VERSION
             );
         }
 
@@ -92,6 +92,7 @@ class PoW_Captcha_Form_Protection {
             'workerUrl'       => add_query_arg( 'ver', POW_CAPTCHA_VERSION, $plugin_url . 'assets/pow-worker.js' ),
             'challengeUrl'    => admin_url( 'admin-ajax.php?action=pow_captcha_challenge' ),
             'interactionMode' => (string) get_option( 'pow_interaction_mode', 'automatic' ),
+            'debugProgress'   => (bool) get_option( 'pow_debug_progress', false ),
         ) );
         wp_localize_script( 'pow-solver', 'powI18n', pow_captcha_frontend_translations() );
     }
@@ -109,9 +110,10 @@ class PoW_Captcha_Form_Protection {
             <input type="hidden" name="_pow_algorithm" value="">
             <input type="hidden" name="_pow_sig" value="">
             <input type="hidden" name="_pow_solution" value="">
-            <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'wp-pow-captcha' ); ?>" aria-busy="true"><span></span></div>
-            <p class="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Preparing security check…', 'wp-pow-captcha' ); ?></p>
-            <p class="pow-details"><?php esc_html_e( 'Requesting a fresh challenge…', 'wp-pow-captcha' ); ?></p>
+            <?php wp_nonce_field( 'pow_captcha_form', '_pow_nonce', false ); ?>
+            <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'proof-of-work-captcha' ); ?>" aria-busy="true"><span></span></div>
+            <p class="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Preparing security check…', 'proof-of-work-captcha' ); ?></p>
+            <p class="pow-details" hidden><?php esc_html_e( 'Requesting a fresh challenge…', 'proof-of-work-captcha' ); ?></p>
         </div>
         <?php
     }
@@ -122,14 +124,19 @@ class PoW_Captcha_Form_Protection {
      * @return bool True if verification passes, false otherwise.
      */
     public function verify_from_post(): bool {
-        if ( ! isset( $_POST['_pow_challenge'], $_POST['_pow_expires'], $_POST['_pow_difficulty'], $_POST['_pow_version'], $_POST['_pow_algorithm'], $_POST['_pow_sig'], $_POST['_pow_solution'] ) ) {
+        if ( ! isset( $_POST['_pow_nonce'], $_POST['_pow_challenge'], $_POST['_pow_expires'], $_POST['_pow_difficulty'], $_POST['_pow_version'], $_POST['_pow_algorithm'], $_POST['_pow_sig'], $_POST['_pow_solution'] ) ) {
+            return false;
+        }
+
+        $nonce = sanitize_text_field( wp_unslash( $_POST['_pow_nonce'] ) );
+        if ( ! wp_verify_nonce( $nonce, 'pow_captcha_form' ) ) {
             return false;
         }
 
         $challenge  = sanitize_text_field( wp_unslash( $_POST['_pow_challenge'] ) );
-        $expires    = (int) $_POST['_pow_expires'];
-        $difficulty = (int) $_POST['_pow_difficulty'];
-        $version    = (int) $_POST['_pow_version'];
+        $expires    = absint( wp_unslash( $_POST['_pow_expires'] ) );
+        $difficulty = absint( wp_unslash( $_POST['_pow_difficulty'] ) );
+        $version    = absint( wp_unslash( $_POST['_pow_version'] ) );
         $algorithm  = sanitize_text_field( wp_unslash( $_POST['_pow_algorithm'] ) );
         $sig        = sanitize_text_field( wp_unslash( $_POST['_pow_sig'] ) );
         $solution   = sanitize_text_field( wp_unslash( $_POST['_pow_solution'] ) );
@@ -169,7 +176,7 @@ class PoW_Captcha_Form_Protection {
             return $user;
         }
 
-        $this->login_pow_error = new WP_Error( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'wp-pow-captcha' ) );
+        $this->login_pow_error = new WP_Error( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-captcha' ) );
 
         remove_filter( 'authenticate', 'wp_authenticate_username_password', 20 );
         remove_filter( 'authenticate', 'wp_authenticate_email_password', 20 );
@@ -191,8 +198,8 @@ class PoW_Captcha_Form_Protection {
     public function verify_comment( array $commentdata ): array {
         if ( ! $this->verify_from_post() ) {
             wp_die(
-                __( 'Security check failed. Please go back and try again.', 'wp-pow-captcha' ),
-                __( 'Security Check Failed', 'wp-pow-captcha' ),
+                esc_html__( 'Security check failed. Please go back and try again.', 'proof-of-work-captcha' ),
+                esc_html__( 'Security Check Failed', 'proof-of-work-captcha' ),
                 array( 'back_link' => true )
             );
         }
@@ -210,7 +217,7 @@ class PoW_Captcha_Form_Protection {
      */
     public function verify_registration( WP_Error $errors, string $login, string $email ): WP_Error {
         if ( ! $this->verify_from_post() ) {
-            $errors->add( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'wp-pow-captcha' ) );
+            $errors->add( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-captcha' ) );
         }
 
         return $errors;

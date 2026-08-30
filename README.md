@@ -1,6 +1,6 @@
-# WP PoW Captcha
+# Proof of Work Captcha
 
-The main goal of WP PoW Captcha is to protect resource-consuming website pages from automated bots. It also provides an additional layer of protection against login brute forcing, automated registrations, and comment spam.
+The main goal of Proof of Work Captcha is to protect resource-consuming website pages from automated bots. It also provides an additional layer of protection against login brute forcing, automated registrations, and comment spam.
 
 The plugin requires a visitor's browser to complete a configurable proof-of-work challenge before a protected request is accepted. Verification is inexpensive for the server, while automated traffic must spend computational effort.
 
@@ -43,7 +43,7 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 
 ## Installation
 
-1. Download the installer from the [latest GitHub release](https://github.com/lostact/wp-pow-captcha/releases/latest).
+1. Download the installer from the [latest GitHub release](https://github.com/lostact/proof-of-work-captcha/releases/latest).
 2. In WordPress, open **Plugins → Add New Plugin → Upload Plugin**.
 3. Upload the ZIP and activate it.
 4. Open **Settings → PoW Captcha** to configure forms, URL patterns, difficulty, and expiry.

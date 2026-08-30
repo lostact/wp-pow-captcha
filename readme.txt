@@ -1,10 +1,10 @@
-=== WP PoW Captcha ===
+=== Proof of Work Captcha ===
 Contributors: lostact
 Tags: captcha, proof of work, anti-spam, security, login
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.2
+Stable tag: 2.5.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Protect configurable URLs and WordPress forms with private, self-hosted proof-of
 
 == Description ==
 
-WP PoW Captcha protects resource-intensive pages and common WordPress forms from automated bots. A visitor's browser completes a configurable SHA-256 proof-of-work challenge before the protected request is accepted.
+Proof of Work Captcha protects resource-intensive pages and common WordPress forms from automated bots. A visitor's browser completes a configurable SHA-256 proof-of-work challenge before the protected request is accepted.
 
 Challenge generation and verification run on your site. No CAPTCHA account, API key, or external CAPTCHA provider is required.
 
@@ -47,7 +47,7 @@ Proof of work increases the cost of automated requests but is not a complete DDo
 
 == Installation ==
 
-1. Install WP PoW Captcha from the WordPress plugin directory, or upload its ZIP from Plugins > Add New Plugin > Upload Plugin.
+1. Install Proof of Work Captcha from the WordPress plugin directory, or upload its ZIP from Plugins > Add New Plugin > Upload Plugin.
 2. Activate the plugin.
 3. Open Settings > PoW Captcha.
 4. Select the forms to protect and configure their difficulty.
@@ -83,7 +83,7 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 
 == Changelog ==
 
-= 2.5.2 =
+= 2.5.4 =
 
 * Added automatic, genuine mouse-movement, and verification-checkbox challenge triggers.
 * Added configurable long-query blocking for regex-matched protected URLs.
@@ -94,6 +94,6 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 
 == Upgrade Notice ==
 
-= 2.5.2 =
+= 2.5.4 =
 
 Adds interaction-based challenge triggers, long-query protection, Persian localization, and RTL support.

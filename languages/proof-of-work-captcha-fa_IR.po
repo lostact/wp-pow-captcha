@@ -1,15 +1,15 @@
-# Persian translation for WP PoW Captcha.
-# Copyright (C) 2026 WP PoW Captcha
-# This file is distributed under the same license as the WP PoW Captcha package.
-# WP PoW Captcha, 2026.
+# Persian translation for Proof of Work Captcha.
+# Copyright (C) 2026 Proof of Work Captcha
+# This file is distributed under the same license as the Proof of Work Captcha package.
+# Proof of Work Captcha, 2026.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: WP PoW Captcha 2.5.2\n"
+"Project-Id-Version: Proof of Work Captcha 2.5.4\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-30 14:14+0330\n"
 "PO-Revision-Date: 2026-08-30 10:45+0000\n"
-"Last-Translator: WP PoW Captcha\n"
+"Last-Translator: Proof of Work Captcha\n"
 "Language: fa_IR\n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -41,7 +41,7 @@ msgid "An error occurred while resetting the secret key."
 msgstr "هنگام بازنشانی کلید محرمانه خطایی رخ داد."
 
 #: includes/class-admin.php:338
-msgid "Another advanced-cache.php drop-in already exists. WP PoW Captcha will not overwrite it."
+msgid "Another advanced-cache.php drop-in already exists. Proof of Work Captcha will not overwrite it."
 msgstr "یک فایل جایگزین advanced-cache.php دیگر از قبل وجود دارد. کپچای PoW وردپرس آن را بازنویسی نمی‌کند."
 
 #: includes/class-admin.php:498
@@ -142,10 +142,6 @@ msgstr ""
 msgid "Configure which forms should be protected by the proof-of-work challenge."
 msgstr "مشخص کنید کدام فرم‌ها باید با چالش اثبات کار محافظت شوند."
 
-#: wp-pow-captcha.php:35
-msgid "Confirm that you are human to begin."
-msgstr "برای شروع تأیید کنید که انسان هستید."
-
 #: includes/class-admin.php:444
 msgid ""
 "Each step adds about 7.2 percent expected work. Difficulty 60 averages 65,536 attempts; use the "
@@ -194,7 +190,7 @@ msgstr ""
 "در هر خط یک الگوی عبارت منظم سازگار با PHP وارد کنید. این الگوها با preg_match() روی URI درخواست "
 "آزمایش می‌شوند."
 
-#: wp-pow-captcha.php:38
+#: proof-of-work-captcha.php:38
 msgid "Error: security worker is not configured."
 msgstr "خطا: پردازشگر امنیتی پیکربندی نشده است."
 
@@ -284,7 +280,7 @@ msgstr "کمینه"
 msgid "Mouse movement"
 msgstr "حرکت ماوس"
 
-#: wp-pow-captcha.php:33
+#: proof-of-work-captcha.php:33
 msgid "Move your mouse to begin the security check."
 msgstr "برای آغاز بررسی امنیتی، ماوس خود را حرکت دهید."
 
@@ -314,7 +310,7 @@ msgstr ""
 msgid "Please wait while we verify your browser…"
 msgstr "لطفاً تا بررسی مرورگر شما شکیبا باشید…"
 
-#: wp-pow-captcha.php:49
+#: proof-of-work-captcha.php:49
 msgid "Please wait; the security check is still preparing or running…"
 msgstr "لطفاً صبر کنید؛ بررسی امنیتی هنوز در حال آماده‌سازی یا اجرا است…"
 
@@ -322,7 +318,7 @@ msgstr "لطفاً صبر کنید؛ بررسی امنیتی هنوز در حا�
 msgid "PoW Captcha"
 msgstr "کپچای PoW"
 
-#: includes/class-form-protection.php:104 wp-pow-captcha.php:43
+#: includes/class-form-protection.php:104 proof-of-work-captcha.php:43
 msgid "Preparing security check…"
 msgstr "در حال آماده‌سازی بررسی امنیتی…"
 
@@ -358,7 +354,7 @@ msgstr "فرم نام‌نویسی"
 msgid "Request blocked: query string is too long."
 msgstr "درخواست مسدود شد: رشته پرس‌وجو بیش از حد طولانی است."
 
-#: includes/class-form-protection.php:105 wp-pow-captcha.php:44
+#: includes/class-form-protection.php:105 proof-of-work-captcha.php:44
 msgid "Requesting a fresh challenge…"
 msgstr "در حال درخواست چالش تازه…"
 
@@ -399,11 +395,11 @@ msgstr "بررسی امنیتی ناموفق بود"
 msgid "Security Information"
 msgstr "اطلاعات امنیتی"
 
-#: wp-pow-captcha.php:47
+#: proof-of-work-captcha.php:47
 msgid "Security challenge service is not configured."
 msgstr "سرویس چالش امنیتی پیکربندی نشده است."
 
-#: wp-pow-captcha.php:41
+#: proof-of-work-captcha.php:41
 msgid "Security check complete. Redirecting…"
 msgstr "بررسی امنیتی کامل شد. در حال انتقال…"
 
@@ -412,7 +408,7 @@ msgstr "بررسی امنیتی کامل شد. در حال انتقال…"
 msgid "Security check failed. Please go back and try again."
 msgstr "بررسی امنیتی ناموفق بود. لطفاً بازگردید و دوباره تلاش کنید."
 
-#: wp-pow-captcha.php:48
+#: proof-of-work-captcha.php:48
 msgid "Security check failed. Reload the page and try again."
 msgstr "بررسی امنیتی ناموفق بود. صفحه را دوباره بارگذاری و تلاش کنید."
 
@@ -421,11 +417,11 @@ msgstr "بررسی امنیتی ناموفق بود. صفحه را دوباره 
 msgid "Security check in progress"
 msgstr "بررسی امنیتی در حال انجام است"
 
-#: wp-pow-captcha.php:32
+#: proof-of-work-captcha.php:32
 msgid "Security check in progress…"
 msgstr "بررسی امنیتی در حال انجام است…"
 
-#: wp-pow-captcha.php:42
+#: proof-of-work-captcha.php:42
 msgid "Security check passed ✓"
 msgstr "بررسی امنیتی تأیید شد ✓"
 
@@ -455,11 +451,11 @@ msgstr "زمان حل"
 msgid "Solve worker failed."
 msgstr "پردازشگر حل ناموفق بود."
 
-#: includes/class-early-protection.php:150 templates/challenge-page.php:155 wp-pow-captcha.php:40
+#: includes/class-early-protection.php:150 templates/challenge-page.php:155 proof-of-work-captcha.php:40
 msgid "Starting secure worker…"
 msgstr "در حال راه‌اندازی پردازشگر امن…"
 
-#: wp-pow-captcha.php:39
+#: proof-of-work-captcha.php:39
 msgid "Starting security check…"
 msgstr "در حال آغاز بررسی امنیتی…"
 
@@ -483,7 +479,7 @@ msgstr ""
 "فایل جایگزین نصب شد، اما WP_CACHE فعال نیست. برای فعال‌سازی محافظت زودهنگام، define( 'WP_CACHE', "
 "true ); را به wp-config.php اضافه کنید."
 
-#: wp-pow-captcha.php:46
+#: proof-of-work-captcha.php:46
 msgid "The fresh challenge request failed."
 msgstr "درخواست چالش تازه ناموفق بود."
 
@@ -495,15 +491,15 @@ msgstr "فایل جایگزین مدیریت‌شده وجود دارد، اما
 msgid "The previous security check failed. Complete the new check to try again."
 msgstr "بررسی امنیتی قبلی ناموفق بود. برای تلاش دوباره، بررسی جدید را کامل کنید."
 
-#: wp-pow-captcha.php:36
+#: proof-of-work-captcha.php:36
 msgid "The proof-of-work check starts after confirmation."
 msgstr "بررسی اثبات کار پس از تأیید آغاز می‌شود."
 
-#: wp-pow-captcha.php:30
+#: proof-of-work-captcha.php:30
 msgid "The security check could not run."
 msgstr "بررسی امنیتی قابل اجرا نبود."
 
-#: wp-pow-captcha.php:31
+#: proof-of-work-captcha.php:31
 msgid "The security check encountered a browser error. Please reload and try again."
 msgstr "بررسی امنیتی با خطای مرورگر روبه‌رو شد. لطفاً صفحه را دوباره بارگذاری و تلاش کنید."
 
@@ -552,11 +548,11 @@ msgstr "الگوهای نشانی"
 msgid "URL Protection"
 msgstr "محافظت از نشانی"
 
-#: wp-pow-captcha.php:45
+#: proof-of-work-captcha.php:45
 msgid "Unable to start the security check. Reload the page and try again."
 msgstr "آغاز بررسی امنیتی ممکن نبود. صفحه را دوباره بارگذاری و تلاش کنید."
 
-#: wp-pow-captcha.php:29
+#: proof-of-work-captcha.php:29
 msgid "Unable to start the security worker."
 msgstr "راه‌اندازی پردازشگر امنیتی ممکن نبود."
 
@@ -568,11 +564,11 @@ msgstr "در دسترس نیست:"
 msgid "Unsolved protected URL requests are rejected before normal plugins and the theme load."
 msgstr "درخواست‌های حل‌نشده برای نشانی‌های محافظت‌شده، پیش از بارگذاری افزونه‌های عادی و پوسته رد می‌شوند."
 
-#: wp-pow-captcha.php:37
+#: proof-of-work-captcha.php:37
 msgid "Verify you are human"
 msgstr "تأیید کنید که انسان هستید"
 
-#: wp-pow-captcha.php:34
+#: proof-of-work-captcha.php:34
 msgid "Waiting for genuine user interaction…"
 msgstr "در انتظار تعامل واقعی کاربر…"
 
@@ -580,7 +576,7 @@ msgstr "در انتظار تعامل واقعی کاربر…"
 msgid "You do not have permission to perform this action."
 msgstr "شما اجازه انجام این کار را ندارید."
 
-#: wp-pow-captcha.php:28
+#: proof-of-work-captcha.php:28
 msgid "measuring…"
 msgstr "در حال اندازه‌گیری…"
 
@@ -592,3 +588,11 @@ msgstr "از صفحه جست‌وجوی وردپرس محافظت می‌کند.
 #, php-format
 msgid "≈ %1$s expected hashes"
 msgstr "حدود %1$s هش مورد انتظار"
+msgid "Debug Progress Report"
+msgstr "گزارش پیشرفت اشکال‌زدایی"
+
+msgid "Show live attempts, hash rate, and elapsed time while solving"
+msgstr "نمایش زنده تعداد تلاش‌ها، نرخ هش و زمان سپری‌شده هنگام حل"
+
+msgid "Disabled by default. Enable only when troubleshooting or benchmarking browser solves."
+msgstr "به‌طور پیش‌فرض غیرفعال است. فقط برای عیب‌یابی یا سنجش حل در مرورگر فعال کنید."

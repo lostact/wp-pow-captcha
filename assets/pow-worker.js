@@ -1,5 +1,5 @@
 /**
- * WP PoW Captcha — Web Worker
+ * Proof of Work Captcha — Web Worker
  *
  * Runs proof-of-work hashing in a dedicated worker thread.
  * Receives { challenge, difficulty } and posts back the numeric solution.

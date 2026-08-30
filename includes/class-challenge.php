@@ -172,7 +172,7 @@ class PoW_Captcha_Challenge {
      * supplied with the pow_captcha_trusted_proxy_ranges filter.
      */
     public static function client_ip(): string {
-        $remote_ip = self::normalize_ip( $_SERVER['REMOTE_ADDR'] ?? '' );
+        $remote_ip = self::normalize_ip( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '' );
         if ( '' === $remote_ip ) {
             return 'unknown';
         }
@@ -180,12 +180,12 @@ class PoW_Captcha_Challenge {
         $trusted_ranges = apply_filters( 'pow_captcha_trusted_proxy_ranges', self::CLOUDFLARE_RANGES );
         if ( is_array( $trusted_ranges ) && self::ip_in_ranges( $remote_ip, $trusted_ranges ) ) {
             // Pseudo IPv4 overwrite mode preserves the real IPv6 address here.
-            $connecting_ipv6 = self::normalize_ip( $_SERVER['HTTP_CF_CONNECTING_IPV6'] ?? '' );
+            $connecting_ipv6 = self::normalize_ip( isset( $_SERVER['HTTP_CF_CONNECTING_IPV6'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IPV6'] ) ) : '' );
             if ( '' !== $connecting_ipv6 && false !== strpos( $connecting_ipv6, ':' ) ) {
                 return $connecting_ipv6;
             }
 
-            $connecting_ip = self::normalize_ip( $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '' );
+            $connecting_ip = self::normalize_ip( isset( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) : '' );
             if ( '' !== $connecting_ip ) {
                 return $connecting_ip;
             }

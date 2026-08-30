@@ -6,6 +6,11 @@
  * from wp-content/advanced-cache.php before normal plugins and themes.
  */
 
+// The early runtime executes before WordPress APIs exist, so enqueue and core
+// escaping helpers are unavailable. Its output uses the local context-aware
+// escape() method and intentionally emits a self-contained bootstrap page.
+// phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet, WordPress.WP.EnqueuedResources.NonEnqueuedScript, WordPress.Security.EscapeOutput.OutputNotEscaped
+
 if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
     final class PoW_Captcha_Early_Runtime {
 
@@ -31,7 +36,8 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
                 return;
             }
 
-            $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+            $request_uri = filter_input( INPUT_SERVER, 'REQUEST_URI', FILTER_SANITIZE_URL );
+            $request_uri = is_string( $request_uri ) ? $request_uri : '';
             if ( '' === $request_uri || strlen( $request_uri ) > 65535 || ! self::matches( $request_uri, $config['url_patterns'] ) ) {
                 return;
             }
@@ -47,15 +53,17 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
             $expiry = self::clamp( isset( $config['expiry_time'] ) ? (int) $config['expiry_time'] : 300, 30, 3600 );
             $ip     = self::client_ip( isset( $config['trusted_proxy_ranges'] ) && is_array( $config['trusted_proxy_ranges'] ) ? $config['trusted_proxy_ranges'] : array() );
 
-            if ( isset( $_COOKIE['pow_cleared'] ) && self::valid_clearance( (string) $_COOKIE['pow_cleared'], $secret, $expiry, $ip ) ) {
+            $clearance_cookie = filter_input( INPUT_COOKIE, 'pow_cleared', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
+            if ( is_string( $clearance_cookie ) && self::valid_clearance( $clearance_cookie, $secret, $expiry, $ip ) ) {
                 self::mark_passed();
                 return;
             }
 
             $solution_error = false;
-            if ( isset( $_COOKIE['pow_solution'] ) ) {
+            $solution_cookie = filter_input( INPUT_COOKIE, 'pow_solution', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
+            if ( is_string( $solution_cookie ) ) {
                 $solution_error = true;
-                $cookie         = (string) $_COOKIE['pow_solution'];
+                $cookie         = $solution_cookie;
                 self::delete_cookie( 'pow_solution' );
                 unset( $_COOKIE['pow_solution'] );
 
@@ -75,7 +83,8 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
         /** Return the raw query string length in bytes. */
         private static function query_string_length( string $request_uri ): int {
             if ( isset( $_SERVER['QUERY_STRING'] ) ) {
-                return strlen( (string) $_SERVER['QUERY_STRING'] );
+                $query_string = filter_input( INPUT_SERVER, 'QUERY_STRING', FILTER_UNSAFE_RAW );
+                return is_string( $query_string ) ? strlen( $query_string ) : 0;
             }
 
             $separator = strpos( $request_uri, '?' );
@@ -91,7 +100,7 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
                 header( 'Pragma: no-cache' );
                 header( 'X-Robots-Tag: noindex, nofollow', true );
             }
-            echo $message;
+            echo self::escape( $message );
             exit;
         }
 
@@ -221,6 +230,7 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
             $asset_url  = isset( $config['asset_url'] ) ? rtrim( (string) $config['asset_url'], '/' ) : '';
             $version    = isset( $config['plugin_version'] ) ? (string) $config['plugin_version'] : '1';
             $interaction_mode = isset( $config['interaction_mode'] ) ? (string) $config['interaction_mode'] : 'automatic';
+            $debug_progress   = ! empty( $config['debug_progress'] );
             if ( ! in_array( $interaction_mode, array( 'automatic', 'mouse', 'checkbox' ), true ) ) {
                 $interaction_mode = 'automatic';
             }
@@ -253,11 +263,11 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
 <html lang="<?php echo self::escape( $locale ); ?>" dir="<?php echo $direction; ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?php echo self::escape( $page_title ); ?></title>
 <?php if ( $is_persian ) : ?><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap"><?php endif; ?>
-<style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#f0f0f1;color:#1d2327;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}html[lang^=fa] body{font-family:"Vazirmatn",Tahoma,sans-serif}.pow-container{width:100%;max-width:500px;padding:40px;text-align:center;background:#fff;border:1px solid #c3c4c7;border-radius:4px;box-shadow:0 1px 3px #0002}.pow-icon{font-size:48px}.site-name{margin:8px 0 24px;color:#646970}.pow-container h1{font-size:1.3em}.pow-progress{position:relative;height:8px;margin-top:22px;overflow:hidden;border-radius:99px;background:#dcdcde}.pow-progress span{position:absolute;inset:0 auto 0 -35%;width:35%;border-radius:inherit;background:#2271b1;animation:p 1.15s ease-in-out infinite}[data-pow-state=solved] .pow-progress span{left:0;width:100%;background:#00a32a;animation:none}[data-pow-state=error] .pow-progress span{left:0;width:100%;background:#d63638;animation:none}[data-pow-state=waiting] .pow-progress span{left:0;width:0;animation:none}.pow-interaction-check{display:flex;align-items:center;gap:12px;margin:20px auto 0;padding:14px 16px;border:1px solid #8c8f94;border-radius:4px;cursor:pointer;text-align:start}.pow-interaction-check input{width:20px;height:20px;margin:0}@keyframes p{to{left:100%}}#pow-status{margin:16px 0 0;font-weight:600;color:#50575e}#pow-details{min-height:1.5em;margin-top:6px;font-size:.8em;color:#646970}.pow-error{margin-bottom:20px;padding:12px;color:#b32d2e;background:#fcf0f1;border:1px solid #d63638;border-radius:4px}</style></head>
-<body><main class="pow-container" data-pow-state="solving" dir="<?php echo $direction; ?>"><div class="pow-icon">&#128274;</div><div class="site-name"><?php echo self::escape( $site_name ); ?></div><h1><?php echo self::escape( $heading ); ?></h1>
+<style>*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#f0f0f1;color:#1d2327;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}html[lang^=fa] body{font-family:"Vazirmatn",Tahoma,sans-serif}.pow-container{width:100%;max-width:500px;padding:40px;text-align:center;background:#fff;border:1px solid #c3c4c7;border-radius:4px;box-shadow:0 1px 3px #0002}.pow-icon{font-size:48px;margin-bottom:16px}.pow-container h1{font-size:1.3em}.pow-progress{position:relative;height:8px;margin-top:22px;overflow:hidden;border-radius:99px;background:#dcdcde}.pow-progress span{position:absolute;inset:0 auto 0 -35%;width:35%;border-radius:inherit;background:#2271b1;animation:p 1.15s ease-in-out infinite}[data-pow-state=solved] .pow-progress span{left:0;width:100%;background:#00a32a;animation:none}[data-pow-state=error] .pow-progress span{left:0;width:100%;background:#d63638;animation:none}[data-pow-state=waiting] .pow-progress span{left:0;width:0;animation:none}.pow-interaction-check{display:flex;align-items:center;gap:12px;margin:20px auto 0;padding:14px 16px;border:1px solid #8c8f94;border-radius:4px;cursor:pointer;text-align:start}.pow-interaction-check input{width:20px;height:20px;margin:0}@keyframes p{to{left:100%}}#pow-status{margin:16px 0 0;font-weight:600;color:#50575e}#pow-details{min-height:1.5em;margin-top:6px;font-size:.8em;color:#646970}.pow-error{margin-bottom:20px;padding:12px;color:#b32d2e;background:#fcf0f1;border:1px solid #d63638;border-radius:4px}</style></head>
+<body><main class="pow-container" data-pow-state="solving" dir="<?php echo $direction; ?>"><div class="pow-icon">&#128274;</div><h1><?php echo self::escape( $heading ); ?></h1>
 <?php if ( $error ) : ?><div class="pow-error"><?php echo self::escape( $retry ); ?></div><?php endif; ?>
-<div class="pow-progress" role="progressbar" aria-label="<?php echo self::escape( $progress_label ); ?>" aria-busy="true"><span></span></div><p id="pow-status" role="status" aria-live="polite"><?php echo self::escape( $please_wait ); ?></p><p id="pow-details"><?php echo self::escape( $starting ); ?></p></main>
-<script>window.powChallenge=<?php echo json_encode( $challenge, $json_flags ); ?>;window.powExpires=<?php echo (int) $expires; ?>;window.powDifficulty=<?php echo (int) $difficulty; ?>;window.powVersion=<?php echo self::VERSION; ?>;window.powAlgorithm=<?php echo json_encode( self::ALGORITHM, $json_flags ); ?>;window.powSig=<?php echo json_encode( $signature, $json_flags ); ?>;window.powInteractionMode=<?php echo json_encode( $interaction_mode, $json_flags ); ?>;window.powI18n=<?php echo json_encode( $frontend_strings, $json_flags ); ?>;window.powWorkerUrl=<?php echo json_encode( $worker_url, $json_flags ); ?>;</script>
+<div class="pow-progress" role="progressbar" aria-label="<?php echo self::escape( $progress_label ); ?>" aria-busy="true"><span></span></div><p id="pow-status" role="status" aria-live="polite"><?php echo self::escape( $please_wait ); ?></p><p id="pow-details" hidden><?php echo self::escape( $starting ); ?></p></main>
+<script>window.powChallenge=<?php echo json_encode( $challenge, $json_flags ); ?>;window.powExpires=<?php echo (int) $expires; ?>;window.powDifficulty=<?php echo (int) $difficulty; ?>;window.powVersion=<?php echo self::VERSION; ?>;window.powAlgorithm=<?php echo json_encode( self::ALGORITHM, $json_flags ); ?>;window.powSig=<?php echo json_encode( $signature, $json_flags ); ?>;window.powInteractionMode=<?php echo json_encode( $interaction_mode, $json_flags ); ?>;window.powDebugProgress=<?php echo $debug_progress ? 'true' : 'false'; ?>;window.powI18n=<?php echo json_encode( $frontend_strings, $json_flags ); ?>;window.powWorkerUrl=<?php echo json_encode( $worker_url, $json_flags ); ?>;</script>
 <script src="<?php echo self::escape( $solver_url ); ?>"></script></body></html>
             <?php
             exit;
@@ -284,22 +294,23 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
 
         /** Determine HTTPS without WordPress helpers. */
         private static function is_ssl(): bool {
-            return ( isset( $_SERVER['HTTPS'] ) && 'off' !== strtolower( (string) $_SERVER['HTTPS'] ) ) ||
+            $https = filter_input( INPUT_SERVER, 'HTTPS', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
+            return ( is_string( $https ) && 'off' !== strtolower( $https ) ) ||
                 ( isset( $_SERVER['SERVER_PORT'] ) && 443 === (int) $_SERVER['SERVER_PORT'] );
         }
 
         /** Return a normalized client IP, trusting configured proxy ranges only. */
         private static function client_ip( array $trusted_ranges ): string {
-            $remote = self::normalize_ip( isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '' );
+            $remote = self::normalize_ip( filter_input( INPUT_SERVER, 'REMOTE_ADDR', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
             if ( '' === $remote ) {
                 return 'unknown';
             }
             if ( self::ip_in_ranges( $remote, $trusted_ranges ) ) {
-                $ipv6 = self::normalize_ip( isset( $_SERVER['HTTP_CF_CONNECTING_IPV6'] ) ? $_SERVER['HTTP_CF_CONNECTING_IPV6'] : '' );
+                $ipv6 = self::normalize_ip( filter_input( INPUT_SERVER, 'HTTP_CF_CONNECTING_IPV6', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
                 if ( '' !== $ipv6 && false !== strpos( $ipv6, ':' ) ) {
                     return $ipv6;
                 }
-                $forwarded = self::normalize_ip( isset( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ? $_SERVER['HTTP_CF_CONNECTING_IP'] : '' );
+                $forwarded = self::normalize_ip( filter_input( INPUT_SERVER, 'HTTP_CF_CONNECTING_IP', FILTER_SANITIZE_FULL_SPECIAL_CHARS ) );
                 if ( '' !== $forwarded ) {
                     return $forwarded;
                 }

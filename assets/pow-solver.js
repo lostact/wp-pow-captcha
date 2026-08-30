@@ -1,5 +1,5 @@
 /**
- * WP PoW Captcha — browser solver controller.
+ * Proof of Work Captcha — browser solver controller.
  */
 (function () {
     'use strict';
@@ -102,6 +102,19 @@
         return value === 'mouse' || value === 'checkbox' ? value : 'automatic';
     }
 
+    function debugProgressEnabled() {
+        if (typeof window.powDebugProgress !== 'undefined') {
+            return window.powDebugProgress === true;
+        }
+        return Boolean(window.powConfig && window.powConfig.debugProgress === true);
+    }
+
+    function configureProgressDetails(details) {
+        if (details) {
+            details.hidden = !debugProgressEnabled();
+        }
+    }
+
     function waitForInteraction(container, mode, status, details, callback) {
         mode = interactionMode(mode);
         if (mode === 'automatic') {
@@ -129,7 +142,8 @@
         }
 
         if (status) {
-            status.textContent = translate('confirmHuman', 'Confirm that you are human to begin.');
+            status.textContent = '';
+            status.hidden = true;
         }
         if (details) {
             details.textContent = translate('startsAfterConfirmation', 'The proof-of-work check starts after confirmation.');
@@ -153,6 +167,9 @@
             }
             checkbox.disabled = true;
             label.setAttribute('data-pow-confirmed', 'true');
+            if (status) {
+                status.hidden = false;
+            }
             callback();
         });
     }
@@ -165,6 +182,7 @@
         var container = document.querySelector('.pow-container');
         var status = document.getElementById('pow-status');
         var details = document.getElementById('pow-details');
+        configureProgressDetails(details);
         var workerUrl = typeof window.powWorkerUrl !== 'undefined'
             ? window.powWorkerUrl
             : (window.powConfig ? window.powConfig.workerUrl : null);
@@ -242,6 +260,7 @@
         var solutionField = element.querySelector('input[name="_pow_solution"]');
         var status = element.querySelector('.pow-status');
         var details = element.querySelector('.pow-details');
+        configureProgressDetails(details);
 
         if (!challenge || !challenge.challenge || !solutionField) {
             throw new Error('Invalid challenge response.');
@@ -348,6 +367,7 @@
         }
 
         captchas.forEach(function (captcha) {
+            configureProgressDetails(captcha.querySelector('.pow-details'));
             waitForInteraction(
                 captcha,
                 window.powConfig ? window.powConfig.interactionMode : 'automatic',

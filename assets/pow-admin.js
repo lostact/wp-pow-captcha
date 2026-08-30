@@ -1,5 +1,5 @@
 /**
- * WP PoW Captcha — admin benchmark and difficulty calculator.
+ * Proof of Work Captcha — admin benchmark and difficulty calculator.
  */
 (function () {
     'use strict';

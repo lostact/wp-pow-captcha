@@ -12,7 +12,7 @@ class PoW_Captcha_Early_Protection {
     public const OPTION_ENABLED = 'pow_early_protection_enabled';
     public const OPTION_STATUS  = 'pow_early_protection_status';
     public const OPTION_CONFIG_VERSION = 'pow_early_protection_config_version';
-    public const MARKER         = 'WP PoW Captcha managed advanced-cache drop-in';
+    public const MARKER         = 'Proof of Work Captcha managed advanced-cache drop-in';
 
     /** Official Cloudflare HTTP proxy ranges. */
     private const CLOUDFLARE_RANGES = array(
@@ -30,6 +30,7 @@ class PoW_Captcha_Early_Protection {
         add_action( 'update_option_pow_url_difficulty', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_max_query_length', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_interaction_mode', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
+        add_action( 'update_option_pow_debug_progress', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_expiry_time', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_blogname', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_WPLANG', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
@@ -57,37 +58,37 @@ class PoW_Captcha_Early_Protection {
     public static function install(): bool {
         $dropin = self::dropin_path();
         if ( file_exists( $dropin ) && ! self::owns_dropin() ) {
-            self::set_status( 'error', __( 'Early protection was not enabled because another advanced-cache.php drop-in already exists. It was not modified.', 'wp-pow-captcha' ) );
+            self::set_status( 'error', __( 'Early protection was not enabled because another advanced-cache.php drop-in already exists. It was not modified.', 'proof-of-work-captcha' ) );
             return false;
         }
 
         if ( ! self::write_config( true ) ) {
-            self::set_status( 'error', __( 'Early protection could not write its runtime configuration. Check wp-content permissions.', 'wp-pow-captcha' ) );
+            self::set_status( 'error', __( 'Early protection could not write its runtime configuration. Check wp-content permissions.', 'proof-of-work-captcha' ) );
             return false;
         }
 
         if ( ! self::atomic_write( $dropin, self::dropin_contents() ) ) {
             self::delete_owned_config();
-            self::set_status( 'error', __( 'Early protection could not create advanced-cache.php. Check wp-content permissions.', 'wp-pow-captcha' ) );
+            self::set_status( 'error', __( 'Early protection could not create advanced-cache.php. Check wp-content permissions.', 'proof-of-work-captcha' ) );
             return false;
         }
 
         if ( ! self::enable_wp_cache() ) {
-            self::set_status( 'warning', __( 'The drop-in was installed, but WP_CACHE is not enabled. Add define( \'WP_CACHE\', true ); to wp-config.php to activate early protection.', 'wp-pow-captcha' ) );
+            self::set_status( 'warning', __( 'The drop-in was installed, but WP_CACHE is not enabled. Add define( \'WP_CACHE\', true ); to wp-config.php to activate early protection.', 'proof-of-work-captcha' ) );
             return true;
         }
 
-        self::set_status( 'success', __( 'Early protection is active. Unsolved protected URL requests exit before normal plugins and the theme load.', 'wp-pow-captcha' ) );
+        self::set_status( 'success', __( 'Early protection is active. Unsolved protected URL requests exit before normal plugins and the theme load.', 'proof-of-work-captcha' ) );
         return true;
     }
 
     /** Remove only files owned by this plugin. */
     public static function uninstall(): void {
         if ( self::owns_dropin() ) {
-            @unlink( self::dropin_path() );
+            wp_delete_file( self::dropin_path() );
         }
         self::delete_owned_config();
-        self::set_status( 'info', __( 'Early protection is disabled. Standard URL protection remains active.', 'wp-pow-captcha' ) );
+        self::set_status( 'info', __( 'Early protection is disabled. Standard URL protection remains active.', 'proof-of-work-captcha' ) );
     }
 
     /** Refresh generated configuration after settings change. */
@@ -121,10 +122,11 @@ class PoW_Captcha_Early_Protection {
     /** Whether the current advanced-cache file belongs to this plugin. */
     private static function owns_dropin(): bool {
         $path = self::dropin_path();
-        if ( ! is_readable( $path ) || filesize( $path ) > 16384 ) {
+        $filesystem = self::filesystem();
+        if ( ! $filesystem || ! $filesystem->is_readable( $path ) || $filesystem->size( $path ) > 16384 ) {
             return false;
         }
-        $contents = file_get_contents( $path );
+        $contents = $filesystem->get_contents( $path );
         return is_string( $contents ) && false !== strpos( $contents, self::MARKER );
     }
 
@@ -143,26 +145,32 @@ class PoW_Captcha_Early_Protection {
             'url_difficulty'        => PoW_Captcha_Challenge::clamp_difficulty( (int) get_option( 'pow_url_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY ) ),
             'max_query_length'      => max( 0, min( 65535, (int) get_option( 'pow_max_query_length', 0 ) ) ),
             'interaction_mode'      => $interaction_mode,
+            'debug_progress'        => (bool) get_option( 'pow_debug_progress', false ),
             'expiry_time'           => max( 30, min( 3600, (int) get_option( 'pow_expiry_time', 300 ) ) ),
             'site_name'             => wp_strip_all_tags( get_bloginfo( 'name' ) ),
             'locale'                => get_locale(),
             'text_direction'        => pow_captcha_text_direction(),
             'asset_url'             => plugin_dir_url( dirname( __FILE__ ) ) . 'assets',
-            'plugin_version'        => defined( 'POW_CAPTCHA_VERSION' ) ? POW_CAPTCHA_VERSION : '2.5.2',
+            'plugin_version'        => defined( 'POW_CAPTCHA_VERSION' ) ? POW_CAPTCHA_VERSION : '2.5.4',
             'frontend_strings'      => pow_captcha_frontend_translations(),
             'page_strings'          => array(
-                'title'       => __( '%s — Security Check', 'wp-pow-captcha' ),
-                'heading'     => __( 'Checking your browser…', 'wp-pow-captcha' ),
-                'retry'       => __( 'The previous security check failed. Complete the new check to try again.', 'wp-pow-captcha' ),
-                'progress'    => __( 'Security check in progress', 'wp-pow-captcha' ),
-                'please_wait' => __( 'Please wait while we verify your browser…', 'wp-pow-captcha' ),
-                'starting'    => __( 'Starting secure worker…', 'wp-pow-captcha' ),
-                'long_query'  => __( 'Request blocked: query string is too long.', 'wp-pow-captcha' ),
+                /* translators: %s: site name. */
+                'title'       => __( '%s — Security Check', 'proof-of-work-captcha' ),
+                'heading'     => __( 'Checking your browser…', 'proof-of-work-captcha' ),
+                'retry'       => __( 'The previous security check failed. Complete the new check to try again.', 'proof-of-work-captcha' ),
+                'progress'    => __( 'Security check in progress', 'proof-of-work-captcha' ),
+                'please_wait' => __( 'Please wait while we verify your browser…', 'proof-of-work-captcha' ),
+                'starting'    => __( 'Starting secure worker…', 'proof-of-work-captcha' ),
+                'long_query'  => __( 'Request blocked: query string is too long.', 'proof-of-work-captcha' ),
             ),
             'trusted_proxy_ranges'  => array_values( (array) apply_filters( 'pow_captcha_trusted_proxy_ranges', self::CLOUDFLARE_RANGES ) ),
         );
 
-        $contents = "<?php\n// WP PoW Captcha generated runtime configuration. Direct access returns data only.\nreturn " . var_export( $config, true ) . ";\n";
+        $json = wp_json_encode( $config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+        if ( false === $json ) {
+            return false;
+        }
+        $contents = "<?php\n// Proof of Work Captcha generated runtime configuration. Direct access returns data only.\nreturn json_decode( " . self::php_string_literal( $json ) . ", true );\n";
         $written  = self::atomic_write( self::config_path(), $contents );
         if ( $written && defined( 'POW_CAPTCHA_VERSION' ) ) {
             update_option( self::OPTION_CONFIG_VERSION, POW_CAPTCHA_VERSION, false );
@@ -177,8 +185,8 @@ class PoW_Captcha_Early_Protection {
 
         return "<?php\n/** " . self::MARKER . " */\n" .
             "if ( ! defined( 'ABSPATH' ) ) { return; }\n" .
-            '$pow_runtime = ' . var_export( $runtime, true ) . ";\n" .
-            '$pow_config_file = ' . var_export( $config, true ) . ";\n" .
+            '$pow_runtime = ' . self::php_string_literal( $runtime ) . ";\n" .
+            '$pow_config_file = ' . self::php_string_literal( $config ) . ";\n" .
             "if ( ! is_readable( \$pow_runtime ) || ! is_readable( \$pow_config_file ) ) { return; }\n" .
             "\$pow_config = include \$pow_config_file;\n" .
             "if ( ! is_array( \$pow_config ) ) { return; }\n" .
@@ -193,11 +201,12 @@ class PoW_Captcha_Early_Protection {
         }
 
         $path = self::wp_config_path();
-        if ( '' === $path || ! is_readable( $path ) || ! is_writable( $path ) ) {
+        $filesystem = self::filesystem();
+        if ( '' === $path || ! $filesystem || ! $filesystem->is_readable( $path ) || ! $filesystem->is_writable( $path ) ) {
             return false;
         }
 
-        $contents = file_get_contents( $path );
+        $contents = $filesystem->get_contents( $path );
         if ( ! is_string( $contents ) ) {
             return false;
         }
@@ -206,7 +215,7 @@ class PoW_Captcha_Early_Protection {
         if ( preg_match( '/define\s*\(\s*([\'\"])WP_CACHE\1\s*,\s*false\s*\)\s*;/i', $contents ) ) {
             $updated = preg_replace( '/define\s*\(\s*([\'\"])WP_CACHE\1\s*,\s*false\s*\)\s*;/i', "define( 'WP_CACHE', true );", $contents, 1 );
         } elseif ( ! preg_match( '/define\s*\(\s*([\'\"])WP_CACHE\1\s*,/i', $contents ) ) {
-            $line = "\n/** Enabled by WP PoW Captcha for early protection. */\ndefine( 'WP_CACHE', true );\n";
+            $line = "\n/** Enabled by Proof of Work Captcha for early protection. */\ndefine( 'WP_CACHE', true );\n";
             $needle = "/* That's all, stop editing!";
             $position = strpos( $contents, $needle );
             if ( false === $position ) {
@@ -239,23 +248,18 @@ class PoW_Captcha_Early_Protection {
     /** Atomically write a file when its directory is writable. */
     private static function atomic_write( string $path, string $contents ): bool {
         $directory = dirname( $path );
-        if ( ! is_dir( $directory ) || ! is_writable( $directory ) || ( file_exists( $path ) && ! is_writable( $path ) ) ) {
+        $filesystem = self::filesystem();
+        if ( ! $filesystem || ! $filesystem->is_dir( $directory ) || ! $filesystem->is_writable( $directory ) || ( $filesystem->exists( $path ) && ! $filesystem->is_writable( $path ) ) ) {
             return false;
         }
 
-        $temporary = tempnam( $directory, '.pow-' );
-        if ( false === $temporary ) {
+        $temporary = trailingslashit( $directory ) . '.pow-' . wp_generate_password( 12, false, false ) . '.tmp';
+        if ( ! $filesystem->put_contents( $temporary, $contents, FS_CHMOD_FILE ) ) {
+            wp_delete_file( $temporary );
             return false;
         }
-
-        $written = file_put_contents( $temporary, $contents, LOCK_EX );
-        if ( false === $written ) {
-            @unlink( $temporary );
-            return false;
-        }
-        @chmod( $temporary, 0644 );
-        if ( ! @rename( $temporary, $path ) ) {
-            @unlink( $temporary );
+        if ( ! $filesystem->move( $temporary, $path, true ) ) {
+            wp_delete_file( $temporary );
             return false;
         }
         return true;
@@ -276,11 +280,30 @@ class PoW_Captcha_Early_Protection {
 
     private static function delete_owned_config(): void {
         $path = self::config_path();
-        if ( is_readable( $path ) ) {
-            $contents = file_get_contents( $path, false, null, 0, 128 );
-            if ( is_string( $contents ) && false !== strpos( $contents, 'WP PoW Captcha generated runtime configuration' ) ) {
-                @unlink( $path );
+        $filesystem = self::filesystem();
+        if ( $filesystem && $filesystem->is_readable( $path ) ) {
+            $contents = $filesystem->get_contents( $path );
+            if ( is_string( $contents ) && false !== strpos( $contents, 'Proof of Work Captcha generated runtime configuration' ) ) {
+                wp_delete_file( $path );
             }
         }
+    }
+
+    /** Return an initialized WordPress filesystem instance. */
+    private static function filesystem() {
+        global $wp_filesystem;
+
+        if ( ! function_exists( 'WP_Filesystem' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+        if ( ! $wp_filesystem && ! WP_Filesystem() ) {
+            return null;
+        }
+        return $wp_filesystem;
+    }
+
+    /** Encode a value as a safe single-quoted PHP string literal. */
+    private static function php_string_literal( string $value ): string {
+        return "'" . str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $value ) . "'";
     }
 }

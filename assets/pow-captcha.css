@@ -6,6 +6,10 @@
     background: #f6f7f7;
 }
 
+.pow-captcha [hidden] {
+    display: none !important;
+}
+
 .pow-captcha[dir="rtl"] {
     direction: rtl;
     text-align: right;

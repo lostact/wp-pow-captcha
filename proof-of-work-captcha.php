@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: WP PoW Captcha
+ * Plugin Name: Proof of Work Captcha
  * Description: Protects configurable URLs and forms using a proof-of-work challenge system. No external dependencies, no third-party CAPTCHA services.
- * Version: 2.5.2
- * Author: WP PoW Captcha
+ * Version: 2.5.4
+ * Author: Proof of Work Captcha
  * License: GPL-2.0-or-later
- * Text Domain: wp-pow-captcha
+ * Text Domain: proof-of-work-captcha
  * Requires at least: 5.8
  * Requires PHP: 7.4
  */
@@ -14,13 +14,21 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'POW_CAPTCHA_VERSION', '2.5.2' );
+define( 'POW_CAPTCHA_VERSION', '2.5.4' );
 
-/** Load bundled translations before plugin classes render any user-facing text. */
-function pow_captcha_load_textdomain() {
-    load_plugin_textdomain( 'wp-pow-captcha', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+/** Load the bundled locale catalog when WordPress has no language pack loaded. */
+function pow_captcha_load_bundled_translation(): void {
+    if ( is_textdomain_loaded( 'proof-of-work-captcha' ) ) {
+        return;
+    }
+
+    $locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+    $mofile = plugin_dir_path( __FILE__ ) . 'languages/proof-of-work-captcha-' . sanitize_file_name( $locale ) . '.mo';
+    if ( file_exists( $mofile ) ) {
+        load_textdomain( 'proof-of-work-captcha', $mofile );
+    }
 }
-add_action( 'plugins_loaded', 'pow_captcha_load_textdomain', 1 );
+add_action( 'plugins_loaded', 'pow_captcha_load_bundled_translation', 1 );
 
 /** Return the correct writing direction, with an explicit Persian fallback. */
 function pow_captcha_text_direction(): string {
@@ -37,28 +45,27 @@ function pow_captcha_is_persian(): bool {
 /** Return translated strings shared by standard and early browser solvers. */
 function pow_captcha_frontend_translations(): array {
     return array(
-        'measuring'               => __( 'measuring…', 'wp-pow-captcha' ),
-        'workerStartError'        => __( 'Unable to start the security worker.', 'wp-pow-captcha' ),
-        'checkRunError'           => __( 'The security check could not run.', 'wp-pow-captcha' ),
-        'browserError'            => __( 'The security check encountered a browser error. Please reload and try again.', 'wp-pow-captcha' ),
-        'inProgress'              => __( 'Security check in progress…', 'wp-pow-captcha' ),
-        'moveMouse'               => __( 'Move your mouse to begin the security check.', 'wp-pow-captcha' ),
-        'waitingInteraction'      => __( 'Waiting for genuine user interaction…', 'wp-pow-captcha' ),
-        'confirmHuman'            => __( 'Confirm that you are human to begin.', 'wp-pow-captcha' ),
-        'startsAfterConfirmation' => __( 'The proof-of-work check starts after confirmation.', 'wp-pow-captcha' ),
-        'verifyHuman'             => __( 'Verify you are human', 'wp-pow-captcha' ),
-        'workerNotConfigured'     => __( 'Error: security worker is not configured.', 'wp-pow-captcha' ),
-        'startingCheck'           => __( 'Starting security check…', 'wp-pow-captcha' ),
-        'startingWorker'          => __( 'Starting secure worker…', 'wp-pow-captcha' ),
-        'completeRedirecting'     => __( 'Security check complete. Redirecting…', 'wp-pow-captcha' ),
-        'passed'                  => __( 'Security check passed ✓', 'wp-pow-captcha' ),
-        'preparing'               => __( 'Preparing security check…', 'wp-pow-captcha' ),
-        'requestingChallenge'     => __( 'Requesting a fresh challenge…', 'wp-pow-captcha' ),
-        'unableToStart'           => __( 'Unable to start the security check. Reload the page and try again.', 'wp-pow-captcha' ),
-        'challengeRequestFailed'  => __( 'The fresh challenge request failed.', 'wp-pow-captcha' ),
-        'serviceNotConfigured'    => __( 'Security challenge service is not configured.', 'wp-pow-captcha' ),
-        'failedReload'            => __( 'Security check failed. Reload the page and try again.', 'wp-pow-captcha' ),
-        'stillPreparing'          => __( 'Please wait; the security check is still preparing or running…', 'wp-pow-captcha' ),
+        'measuring'               => __( 'measuring…', 'proof-of-work-captcha' ),
+        'workerStartError'        => __( 'Unable to start the security worker.', 'proof-of-work-captcha' ),
+        'checkRunError'           => __( 'The security check could not run.', 'proof-of-work-captcha' ),
+        'browserError'            => __( 'The security check encountered a browser error. Please reload and try again.', 'proof-of-work-captcha' ),
+        'inProgress'              => __( 'Security check in progress…', 'proof-of-work-captcha' ),
+        'moveMouse'               => __( 'Move your mouse to begin the security check.', 'proof-of-work-captcha' ),
+        'waitingInteraction'      => __( 'Waiting for genuine user interaction…', 'proof-of-work-captcha' ),
+        'startsAfterConfirmation' => __( 'The proof-of-work check starts after confirmation.', 'proof-of-work-captcha' ),
+        'verifyHuman'             => __( 'Verify you are human', 'proof-of-work-captcha' ),
+        'workerNotConfigured'     => __( 'Error: security worker is not configured.', 'proof-of-work-captcha' ),
+        'startingCheck'           => __( 'Starting security check…', 'proof-of-work-captcha' ),
+        'startingWorker'          => __( 'Starting secure worker…', 'proof-of-work-captcha' ),
+        'completeRedirecting'     => __( 'Security check complete. Redirecting…', 'proof-of-work-captcha' ),
+        'passed'                  => __( 'Security check passed ✓', 'proof-of-work-captcha' ),
+        'preparing'               => __( 'Preparing security check…', 'proof-of-work-captcha' ),
+        'requestingChallenge'     => __( 'Requesting a fresh challenge…', 'proof-of-work-captcha' ),
+        'unableToStart'           => __( 'Unable to start the security check. Reload the page and try again.', 'proof-of-work-captcha' ),
+        'challengeRequestFailed'  => __( 'The fresh challenge request failed.', 'proof-of-work-captcha' ),
+        'serviceNotConfigured'    => __( 'Security challenge service is not configured.', 'proof-of-work-captcha' ),
+        'failedReload'            => __( 'Security check failed. Reload the page and try again.', 'proof-of-work-captcha' ),
+        'stillPreparing'          => __( 'Please wait; the security check is still preparing or running…', 'proof-of-work-captcha' ),
     );
 }
 
@@ -91,6 +98,9 @@ function pow_captcha_activate() {
     }
     if ( false === get_option( 'pow_interaction_mode' ) ) {
         add_option( 'pow_interaction_mode', 'automatic' );
+    }
+    if ( false === get_option( 'pow_debug_progress' ) ) {
+        add_option( 'pow_debug_progress', false );
     }
     if ( false === get_option( 'pow_difficulty_schema' ) ) {
         add_option( 'pow_difficulty_schema', 2 );

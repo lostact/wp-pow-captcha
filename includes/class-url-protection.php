@@ -39,7 +39,7 @@ class PoW_Captcha_URL_Protection {
             return;
         }
 
-        $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
         $matched     = false;
 
         foreach ( $patterns as $pattern ) {
@@ -146,7 +146,7 @@ class PoW_Captcha_URL_Protection {
     /** Return the raw query string length in bytes. */
     private function query_string_length( string $request_uri ): int {
         if ( isset( $_SERVER['QUERY_STRING'] ) ) {
-            return strlen( (string) $_SERVER['QUERY_STRING'] );
+            return strlen( sanitize_text_field( wp_unslash( $_SERVER['QUERY_STRING'] ) ) );
         }
 
         $separator = strpos( $request_uri, '?' );
@@ -159,7 +159,7 @@ class PoW_Captcha_URL_Protection {
         status_header( 414 );
         header( 'Content-Type: text/plain; charset=UTF-8' );
         header( 'X-Robots-Tag: noindex, nofollow', true );
-        echo esc_html__( 'Request blocked: query string is too long.', 'wp-pow-captcha' );
+        echo esc_html__( 'Request blocked: query string is too long.', 'proof-of-work-captcha' );
         exit;
     }
 
@@ -178,6 +178,27 @@ class PoW_Captcha_URL_Protection {
         }
 
         $is_secure = is_ssl();
+
+        $plugin_url = plugin_dir_url( dirname( __FILE__ ) );
+        wp_enqueue_style( 'pow-captcha-challenge', $plugin_url . 'assets/pow-challenge.css', array(), POW_CAPTCHA_VERSION );
+        if ( pow_captcha_is_persian() ) {
+            wp_enqueue_style( 'pow-captcha-vazirmatn', 'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap', array(), POW_CAPTCHA_VERSION );
+        }
+        wp_enqueue_script( 'pow-solver', $plugin_url . 'assets/pow-solver.js', array(), POW_CAPTCHA_VERSION, true );
+        wp_add_inline_script(
+            'pow-solver',
+            'window.powChallenge=' . wp_json_encode( $challenge['challenge'] ) . ';' .
+            'window.powExpires=' . absint( $challenge['expires'] ) . ';' .
+            'window.powDifficulty=' . absint( $challenge['difficulty'] ) . ';' .
+            'window.powVersion=' . absint( $challenge['version'] ) . ';' .
+            'window.powAlgorithm=' . wp_json_encode( $challenge['algorithm'] ) . ';' .
+            'window.powSig=' . wp_json_encode( $challenge['signature'] ) . ';' .
+            'window.powInteractionMode=' . wp_json_encode( $interaction_mode ) . ';' .
+            'window.powDebugProgress=' . wp_json_encode( (bool) get_option( 'pow_debug_progress', false ) ) . ';' .
+            'window.powI18n=' . wp_json_encode( pow_captcha_frontend_translations() ) . ';' .
+            'window.powWorkerUrl=' . wp_json_encode( add_query_arg( 'ver', POW_CAPTCHA_VERSION, $plugin_url . 'assets/pow-worker.js' ) ) . ';',
+            'before'
+        );
 
         nocache_headers();
         header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0' );
