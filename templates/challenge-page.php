@@ -39,7 +39,7 @@ if ( ! defined( 'ABSPATH' ) ) {
             </div>
         <?php endif; ?>
 
-        <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'proof-of-work-captcha' ); ?>" aria-busy="true"><span></span></div>
+        <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'proof-of-work-captcha' ); ?>" aria-busy="true" hidden><span></span></div>
         <p id="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Please wait while we verify your browser…', 'proof-of-work-captcha' ); ?></p>
         <p id="pow-details" hidden><?php esc_html_e( 'Starting secure worker…', 'proof-of-work-captcha' ); ?></p>
     </div>

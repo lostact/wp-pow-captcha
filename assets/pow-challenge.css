@@ -11,26 +11,32 @@ body {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    padding: 20px;
+    padding: 24px;
     color: #1d2327;
-    background-color: #f0f0f1;
+    background: radial-gradient(circle at top, #f8fafc 0, #eef1f4 55%, #e8ebef 100%);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 }
 
 html[lang^="fa"] body { font-family: "Vazirmatn", Tahoma, sans-serif; }
-.pow-container { width: 100%; max-width: 500px; padding: 40px; text-align: center; background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
-.pow-container h1 { margin-bottom: 8px; color: #1d2327; font-size: 1.3em; }
-.pow-container .pow-icon { margin-bottom: 16px; font-size: 48px; }
-#pow-status { margin-top: 16px; color: #50575e; font-size: 0.95em; font-weight: 600; line-height: 1.5; }
+.pow-container { width: 100%; max-width: 580px; padding: 48px; text-align: center; background: rgba(255, 255, 255, 0.98); border: 1px solid #d3d7dc; border-radius: 14px; box-shadow: 0 18px 55px rgba(30, 35, 40, 0.12); }
+.pow-container h1 { margin-bottom: 12px; color: #1d2327; font-size: 1.45em; line-height: 1.5; }
+.pow-container .pow-icon { display: grid; width: 76px; height: 76px; margin: 0 auto 24px; place-items: center; background: #f0f6fc; border: 1px solid #c9e0f5; border-radius: 50%; font-size: 42px; }
+#pow-status { margin-top: 18px; color: #50575e; font-size: 0.95em; font-weight: 600; line-height: 1.6; }
 #pow-details { min-height: 1.5em; margin-top: 6px; color: #646970; font-size: 0.8em; font-variant-numeric: tabular-nums; }
-.pow-progress { position: relative; height: 8px; margin-top: 22px; overflow: hidden; background: #dcdcde; border-radius: 999px; }
-.pow-progress span { position: absolute; top: 0; bottom: 0; left: -35%; width: 35%; background: #2271b1; border-radius: inherit; animation: pow-progress 1.15s ease-in-out infinite; }
+.pow-progress { position: relative; height: 10px; margin-top: 26px; overflow: hidden; background: #e7eaee; border-radius: 999px; box-shadow: inset 0 1px 2px rgba(30, 35, 40, 0.08); }
+.pow-progress span { position: absolute; top: 0; bottom: 0; left: -35%; width: 35%; background: linear-gradient(90deg, #135e96, #72aee6); border-radius: inherit; animation: pow-progress 1.15s ease-in-out infinite; }
 [data-pow-state="solved"] .pow-progress span { left: 0; width: 100%; background: #00a32a; animation: none; }
 [data-pow-state="error"] .pow-progress span { left: 0; width: 100%; background: #d63638; animation: none; }
 [data-pow-state="waiting"] .pow-progress span { left: 0; width: 0; animation: none; }
-.pow-interaction-check { display: flex; align-items: center; gap: 12px; margin: 20px auto 0; padding: 14px 16px; border: 1px solid #8c8f94; border-radius: 4px; cursor: pointer; text-align: start; }
-.pow-interaction-check input { width: 20px; height: 20px; margin: 0; }
+.pow-interaction-check { display: flex; align-items: center; justify-content: flex-start; gap: 16px; min-height: 68px; margin: 26px 0 0; padding: 18px 20px; color: #1d2327; background: #f8f9fa; border: 2px solid #8c8f94; border-radius: 10px; cursor: pointer; font-size: 1.05em; font-weight: 600; transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease; }
+.pow-interaction-check span { flex: 1 1 auto; }
+[dir="rtl"] .pow-interaction-check { direction: rtl; text-align: right; }
+[dir="rtl"] .pow-interaction-check span { text-align: right; }
+[dir="ltr"] .pow-interaction-check { direction: ltr; text-align: left; }
+.pow-interaction-check:hover, .pow-interaction-check:focus-within { background: #f0f6fc; border-color: #2271b1; box-shadow: 0 0 0 3px rgba(34, 113, 177, .14); }
+.pow-interaction-check input { flex: 0 0 24px; width: 24px; height: 24px; margin: 0; accent-color: #2271b1; }
 .pow-error { margin-bottom: 20px; padding: 12px 16px; color: #cc1818; background: #fcf0f1; border: 1px solid #cc1818; border-radius: 4px; font-size: 0.9em; }
 
 @keyframes pow-progress { from { left: -35%; } to { left: 100%; } }
 @media (prefers-reduced-motion: reduce) { .pow-progress span { left: 0; width: 45%; animation: none; } }
+@media (max-width: 600px) { body { padding: 14px; } .pow-container { padding: 30px 22px; border-radius: 10px; } .pow-container .pow-icon { width: 64px; height: 64px; margin-bottom: 20px; font-size: 36px; } }

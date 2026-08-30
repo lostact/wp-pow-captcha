@@ -111,7 +111,7 @@ class PoW_Captcha_Form_Protection {
             <input type="hidden" name="_pow_sig" value="">
             <input type="hidden" name="_pow_solution" value="">
             <?php wp_nonce_field( 'pow_captcha_form', '_pow_nonce', false ); ?>
-            <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'proof-of-work-captcha' ); ?>" aria-busy="true"><span></span></div>
+            <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'proof-of-work-captcha' ); ?>" aria-busy="true" hidden><span></span></div>
             <p class="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Preparing security check…', 'proof-of-work-captcha' ); ?></p>
             <p class="pow-details" hidden><?php esc_html_e( 'Requesting a fresh challenge…', 'proof-of-work-captcha' ); ?></p>
         </div>
@@ -222,4 +222,5 @@ class PoW_Captcha_Form_Protection {
 
         return $errors;
     }
+
 }

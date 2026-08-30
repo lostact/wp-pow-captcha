@@ -151,7 +151,7 @@ class PoW_Captcha_Early_Protection {
             'locale'                => get_locale(),
             'text_direction'        => pow_captcha_text_direction(),
             'asset_url'             => plugin_dir_url( dirname( __FILE__ ) ) . 'assets',
-            'plugin_version'        => defined( 'POW_CAPTCHA_VERSION' ) ? POW_CAPTCHA_VERSION : '2.5.4',
+            'plugin_version'        => defined( 'POW_CAPTCHA_VERSION' ) ? POW_CAPTCHA_VERSION : '2.5.7',
             'frontend_strings'      => pow_captcha_frontend_translations(),
             'page_strings'          => array(
                 /* translators: %s: site name. */

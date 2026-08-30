@@ -115,6 +115,13 @@
         }
     }
 
+    function showProgress(container) {
+        var progress = container ? container.querySelector('.pow-progress') : null;
+        if (progress) {
+            progress.hidden = false;
+        }
+    }
+
     function waitForInteraction(container, mode, status, details, callback) {
         mode = interactionMode(mode);
         if (mode === 'automatic') {
@@ -166,7 +173,7 @@
                 return;
             }
             checkbox.disabled = true;
-            label.setAttribute('data-pow-confirmed', 'true');
+            label.hidden = true;
             if (status) {
                 status.hidden = false;
             }
@@ -196,6 +203,7 @@
         }
 
         waitForInteraction(container, window.powInteractionMode, status, details, function () {
+            showProgress(container);
             setState(container, 'solving');
             if (status) {
                 status.textContent = translate('startingCheck', 'Starting security check…');
@@ -268,6 +276,7 @@
 
         populateChallengeFields(element, challenge);
         element.setAttribute('data-pow-solving', 'true');
+        showProgress(element);
         setState(element, 'solving');
         solve(workerUrl, challenge.challenge, Number(challenge.difficulty), Number(challenge.version), {
             onProgress: function (data) {
