@@ -27,6 +27,7 @@ class PoW_Captcha_Early_Protection {
     public function __construct() {
         add_action( 'update_option_pow_url_patterns', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_url_difficulty', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
+        add_action( 'update_option_pow_max_query_length', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_expiry_time', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_blogname', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
         add_action( 'update_option_pow_secret_key', array( __CLASS__, 'synchronize_if_enabled' ), 10, 0 );
@@ -127,10 +128,11 @@ class PoW_Captcha_Early_Protection {
             'secret_key'           => (string) get_option( 'pow_secret_key', '' ),
             'url_patterns'          => array_values( (array) get_option( 'pow_url_patterns', array() ) ),
             'url_difficulty'        => PoW_Captcha_Challenge::clamp_difficulty( (int) get_option( 'pow_url_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY ) ),
+            'max_query_length'      => max( 0, min( 65535, (int) get_option( 'pow_max_query_length', 0 ) ) ),
             'expiry_time'           => max( 30, min( 3600, (int) get_option( 'pow_expiry_time', 300 ) ) ),
             'site_name'             => wp_strip_all_tags( get_bloginfo( 'name' ) ),
             'asset_url'             => plugin_dir_url( dirname( __FILE__ ) ) . 'assets',
-            'plugin_version'        => defined( 'POW_CAPTCHA_VERSION' ) ? POW_CAPTCHA_VERSION : '2.3.0',
+            'plugin_version'        => defined( 'POW_CAPTCHA_VERSION' ) ? POW_CAPTCHA_VERSION : '2.4.0',
             'trusted_proxy_ranges'  => array_values( (array) apply_filters( 'pow_captcha_trusted_proxy_ranges', self::CLOUDFLARE_RANGES ) ),
         );
 

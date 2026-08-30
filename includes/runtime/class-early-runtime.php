@@ -32,8 +32,13 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
             }
 
             $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
-            if ( '' === $request_uri || strlen( $request_uri ) > 8192 || ! self::matches( $request_uri, $config['url_patterns'] ) ) {
+            if ( '' === $request_uri || strlen( $request_uri ) > 65535 || ! self::matches( $request_uri, $config['url_patterns'] ) ) {
                 return;
+            }
+
+            $maximum_query_length = isset( $config['max_query_length'] ) ? self::clamp( (int) $config['max_query_length'], 0, 65535 ) : 0;
+            if ( $maximum_query_length > 0 && self::query_string_length( $request_uri ) > $maximum_query_length ) {
+                self::block_long_query();
             }
 
             $secret = (string) $config['secret_key'];
@@ -63,6 +68,29 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
             }
 
             self::show_challenge( $config, $secret, $ip, $solution_error );
+        }
+
+        /** Return the raw query string length in bytes. */
+        private static function query_string_length( string $request_uri ): int {
+            if ( isset( $_SERVER['QUERY_STRING'] ) ) {
+                return strlen( (string) $_SERVER['QUERY_STRING'] );
+            }
+
+            $separator = strpos( $request_uri, '?' );
+            return false === $separator ? 0 : strlen( substr( $request_uri, $separator + 1 ) );
+        }
+
+        /** Emit a minimal response for an oversized matching query. */
+        private static function block_long_query(): void {
+            if ( ! headers_sent() ) {
+                http_response_code( 414 );
+                header( 'Content-Type: text/plain; charset=UTF-8' );
+                header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0' );
+                header( 'Pragma: no-cache' );
+                header( 'X-Robots-Tag: noindex, nofollow', true );
+            }
+            echo 'Request blocked: query string is too long.';
+            exit;
         }
 
         /** Match the request against administrator-validated regular expressions. */

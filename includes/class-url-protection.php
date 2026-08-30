@@ -53,6 +53,11 @@ class PoW_Captcha_URL_Protection {
             return;
         }
 
+        $maximum_query_length = (int) get_option( 'pow_max_query_length', 0 );
+        if ( $maximum_query_length > 0 && $this->query_string_length( $request_uri ) > $maximum_query_length ) {
+            $this->block_long_query();
+        }
+
         $secret_key = get_option( 'pow_secret_key', '' );
 
         // Check the signed, server-expiring, IP-bound clearance cookie.
@@ -136,6 +141,26 @@ class PoW_Captcha_URL_Protection {
 
         // No solution cookie and no valid cleared cookie — show fresh challenge.
         $this->show_challenge( false );
+    }
+
+    /** Return the raw query string length in bytes. */
+    private function query_string_length( string $request_uri ): int {
+        if ( isset( $_SERVER['QUERY_STRING'] ) ) {
+            return strlen( (string) $_SERVER['QUERY_STRING'] );
+        }
+
+        $separator = strpos( $request_uri, '?' );
+        return false === $separator ? 0 : strlen( substr( $request_uri, $separator + 1 ) );
+    }
+
+    /** Reject an oversized query without issuing or accepting a challenge. */
+    private function block_long_query(): void {
+        nocache_headers();
+        status_header( 414 );
+        header( 'Content-Type: text/plain; charset=UTF-8' );
+        header( 'X-Robots-Tag: noindex, nofollow', true );
+        echo esc_html__( 'Request blocked: query string is too long.', 'wp-pow-captcha' );
+        exit;
     }
 
     /**

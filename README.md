@@ -8,6 +8,7 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 
 - Protect WordPress login, registration, and comment forms.
 - Protect URLs selected with regular-expression patterns.
+- Optionally reject oversized query strings only on regex-matched protected URLs.
 - Fine-grained difficulty control with small, predictable increments.
 - Browser progress indicator with attempts, hash rate, and elapsed time.
 - Admin benchmark and estimated solve-time table.
@@ -28,6 +29,7 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 - **No cached form puzzles:** pages contain placeholders; each browser requests a fresh challenge after page load.
 - **Fail-fast login checks:** invalid proof of work is rejected before WordPress performs password hashing.
 - **Optional lowest-resource mode:** a managed `advanced-cache.php` gateway performs protected URL checks early in bootstrap. It never overwrites another product's existing drop-in and falls back to standard protection when unavailable.
+- **Long-query blocking:** matching protected URLs can return HTTP 414 before a CAPTCHA clearance is considered; a limit of 0 leaves this disabled.
 
 ## How lowest-resource mode works
 

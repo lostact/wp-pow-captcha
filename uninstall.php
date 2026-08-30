@@ -30,6 +30,7 @@ delete_option( 'pow_protected_forms' );
 delete_option( 'pow_url_patterns' );
 delete_option( 'pow_form_difficulty' );
 delete_option( 'pow_url_difficulty' );
+delete_option( 'pow_max_query_length' );
 delete_option( 'pow_expiry_time' );
 delete_option( 'pow_difficulty_schema' );
 delete_option( 'pow_early_protection_enabled' );

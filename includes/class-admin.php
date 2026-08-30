@@ -62,6 +62,12 @@ class PoW_Captcha_Admin {
             'sanitize_callback' => array( $this, 'sanitize_difficulty' ),
         ) );
 
+        register_setting( 'pow_captcha_group', 'pow_max_query_length', array(
+            'type'              => 'integer',
+            'sanitize_callback' => array( $this, 'sanitize_max_query_length' ),
+            'default'           => 0,
+        ) );
+
         register_setting( 'pow_captcha_group', PoW_Captcha_Early_Protection::OPTION_ENABLED, array(
             'type'              => 'boolean',
             'sanitize_callback' => array( $this, 'sanitize_early_protection' ),
@@ -112,6 +118,14 @@ class PoW_Captcha_Admin {
             'pow_url_difficulty',
             __( 'URL Difficulty', 'wp-pow-captcha' ),
             array( $this, 'render_url_difficulty_field' ),
+            'pow-captcha',
+            'pow_url_section'
+        );
+
+        add_settings_field(
+            'pow_max_query_length',
+            __( 'Maximum Query String Length', 'wp-pow-captcha' ),
+            array( $this, 'render_max_query_length_field' ),
             'pow-captcha',
             'pow_url_section'
         );
@@ -235,6 +249,19 @@ class PoW_Captcha_Admin {
     }
 
     /**
+     * Sanitize the protected-URL query string limit.
+     *
+     * Zero disables blocking; enabled limits are kept within a practical range.
+     *
+     * @param mixed $input The input value.
+     * @return int Query string byte limit.
+     */
+    public function sanitize_max_query_length( $input ): int {
+        $value = absint( $input );
+        return 0 === $value ? 0 : max( 128, min( 65535, $value ) );
+    }
+
+    /**
      * Render the general settings section description.
      */
     public function render_general_section() {
@@ -355,6 +382,16 @@ class PoW_Captcha_Admin {
     public function render_url_difficulty_field() {
         $value = (int) get_option( 'pow_url_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
         $this->render_difficulty_control( 'pow_url_difficulty', $value );
+    }
+
+    /** Render the maximum protected-URL query string length field. */
+    public function render_max_query_length_field() {
+        $value = (int) get_option( 'pow_max_query_length', 0 );
+        printf(
+            '<input type="number" name="pow_max_query_length" value="%d" min="0" max="65535" step="1" class="small-text">',
+            esc_attr( $value )
+        );
+        echo '<p class="description">' . esc_html__( 'Block matching URLs with an HTTP 414 response when their raw query string exceeds this many bytes. Use 0 to disable. This applies only to URLs matching the patterns above and is checked before accepting a CAPTCHA clearance.', 'wp-pow-captcha' ) . '</p>';
     }
 
     /** Render a synchronized slider/number difficulty control. */
