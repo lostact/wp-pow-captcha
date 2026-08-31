@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Proof of Work Captcha
  * Description: Protects configurable URLs and forms using a proof-of-work challenge system. No external dependencies, no third-party CAPTCHA services.
- * Version: 2.5.10
+ * Version: 2.5.11
  * Author: Proof of Work Captcha
  * License: GPL-2.0-or-later
  * Text Domain: proof-of-work-captcha
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'POW_CAPTCHA_VERSION', '2.5.10' );
+define( 'POW_CAPTCHA_VERSION', '2.5.11' );
 
 /** Load the bundled locale catalog when WordPress has no language pack loaded. */
 function pow_captcha_load_bundled_translation(): void {

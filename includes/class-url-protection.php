@@ -43,7 +43,8 @@ class PoW_Captcha_URL_Protection {
         $matched     = false;
 
         foreach ( $patterns as $pattern ) {
-            if ( @preg_match( $pattern, $request_uri ) ) {
+            $compiled_pattern = self::compile_pattern( $pattern );
+            if ( null !== $compiled_pattern && 1 === preg_match( $compiled_pattern, $request_uri ) ) {
                 $matched = true;
                 break;
             }
@@ -141,6 +142,49 @@ class PoW_Captcha_URL_Protection {
 
         // No solution cookie and no valid cleared cookie — show fresh challenge.
         $this->show_challenge( false );
+    }
+
+    /**
+     * Compile an undelimited administrator-entered expression.
+     *
+     * @param mixed       $pattern Undelimited regular expression.
+     * @param string|null $error   Compilation error, when requested.
+     * @return string|null Compiled PHP regex, or null when invalid.
+     */
+    public static function compile_pattern( $pattern, &$error = null ): ?string {
+        $error = null;
+        if ( ! is_string( $pattern ) || '' === trim( $pattern ) ) {
+            $error = __( 'The pattern is empty.', 'proof-of-work-captcha' );
+            return null;
+        }
+
+        $pattern = trim( $pattern );
+        if ( 1 === preg_match( '/^([\/~#%!@;`]).+\1[a-zA-Z]*$/s', $pattern ) ) {
+            $error = __( 'Remove the regex delimiters; the plugin adds them automatically.', 'proof-of-work-captcha' );
+            return null;
+        }
+
+        // An ASCII control character is used internally so normal regex and
+        // URL punctuation never needs to be escaped by the administrator.
+        $compiled = chr( 31 ) . $pattern . chr( 31 );
+        $message  = '';
+        set_error_handler(
+            static function ( $severity, $text ) use ( &$message ) {
+                $message = (string) $text;
+                return true;
+            }
+        );
+        try {
+            $result = preg_match( $compiled, '' );
+        } finally {
+            restore_error_handler();
+        }
+
+        if ( false === $result ) {
+            $error = '' !== $message ? $message : preg_last_error_msg();
+            return null;
+        }
+        return $compiled;
     }
 
     /** Return the raw query string length in bytes. */

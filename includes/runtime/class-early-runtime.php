@@ -111,11 +111,22 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
                 if ( ++$count > 100 || ! is_string( $pattern ) || strlen( $pattern ) > 512 ) {
                     continue;
                 }
-                if ( 1 === @preg_match( $pattern, $request_uri ) ) {
+                $compiled = self::compile_pattern( $pattern );
+                if ( null !== $compiled && 1 === preg_match( $compiled, $request_uri ) ) {
                     return true;
                 }
             }
             return false;
+        }
+
+        /** Compile an undelimited expression from generated configuration. */
+        private static function compile_pattern( string $pattern ): ?string {
+            $pattern = trim( $pattern );
+            if ( '' === $pattern || 1 === preg_match( '/^([\/~#%!@;`]).+\1[a-zA-Z]*$/s', $pattern ) ) {
+                return null;
+            }
+            $compiled = chr( 31 ) . $pattern . chr( 31 );
+            return false !== @preg_match( $compiled, '' ) ? $compiled : null;
         }
 
         /** Mark a matching request as cleared for the normal plugin fallback. */

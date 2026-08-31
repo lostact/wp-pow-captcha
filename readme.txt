@@ -4,7 +4,7 @@ Tags: captcha, proof of work, anti-spam, security, login
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.10
+Stable tag: 2.5.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -52,7 +52,7 @@ Proof of work increases the cost of automated requests but is not a complete DDo
 2. Activate the plugin.
 3. Open Settings > PoW Captcha.
 4. Select the forms to protect and configure their difficulty.
-5. Add one PHP-compatible regular expression per line for URLs that should be protected.
+5. Add one undelimited regular expression per line for URLs that should be protected.
 6. Select the challenge trigger and adjust expiry and query-length settings as needed.
 7. Optionally enable Lowest-resource URL Protection after reviewing its status and diagnostics.
 
@@ -68,7 +68,7 @@ Each difficulty step adds approximately 7.2 percent expected work. Use the built
 
 = What URL patterns can I use? =
 
-Enter one PHP-compatible regular expression per line. Patterns are tested against the complete request URI. Test patterns carefully before enabling them on a production site.
+Enter one regular expression per line without surrounding delimiters. The plugin adds delimiters automatically and rejects invalid lines with a visible warning. Patterns are tested against the complete request URI.
 
 = What is Lowest-resource URL Protection? =
 
@@ -83,6 +83,11 @@ Yes. It trusts Cloudflare forwarding headers only when the direct peer belongs t
 URL clearance expires, is bound to the visitor IP, and cannot outlive the signed challenge. A changed address, expired clearance, deleted cookie, or invalid solution requires a new challenge.
 
 == Changelog ==
+
+= 2.5.11 =
+
+* URL protection patterns no longer accept or require PHP regex delimiters.
+* Invalid URL pattern lines are rejected with visible settings warnings instead of failing silently.
 
 = 2.5.10 =
 

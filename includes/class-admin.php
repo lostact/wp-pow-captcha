@@ -243,12 +243,36 @@ class PoW_Captcha_Admin {
             return array();
         }
 
-        $sanitized = array();
-        foreach ( $patterns as $pattern ) {
+        $sanitized    = array();
+        $invalid_rows = array();
+        foreach ( $patterns as $index => $pattern ) {
             $pattern = trim( sanitize_text_field( $pattern ) );
             if ( '' !== $pattern ) {
+                $error = null;
+                if ( null === PoW_Captcha_URL_Protection::compile_pattern( $pattern, $error ) ) {
+                    $invalid_rows[] = sprintf(
+                        /* translators: 1: textarea line number, 2: regex compilation error. */
+                        __( 'Line %1$d: %2$s', 'proof-of-work-captcha' ),
+                        (int) $index + 1,
+                        (string) $error
+                    );
+                    continue;
+                }
                 $sanitized[] = $pattern;
             }
+        }
+
+        if ( ! empty( $invalid_rows ) ) {
+            add_settings_error(
+                'pow_url_patterns',
+                'pow_url_patterns_invalid',
+                sprintf(
+                    /* translators: %s: line-specific regular-expression errors. */
+                    __( 'Invalid URL patterns were not saved: %s', 'proof-of-work-captcha' ),
+                    implode( ' ', $invalid_rows )
+                ),
+                'warning'
+            );
         }
 
         return $sanitized;
@@ -442,8 +466,8 @@ class PoW_Captcha_Admin {
             '<textarea name="pow_url_patterns" rows="6" cols="50" class="large-text">%s</textarea>',
             esc_textarea( $value )
         );
-        echo '<p class="description">' . esc_html__( 'Enter one PHP-compatible regex pattern per line. These patterns are tested against the request URI using preg_match().', 'proof-of-work-captcha' ) . '</p>';
-        echo '<p class="description"><strong>' . esc_html__( 'Example:', 'proof-of-work-captcha' ) . '</strong> <code>/\\?s=/</code> ' . esc_html__( 'protects the WordPress search page.', 'proof-of-work-captcha' ) . '</p>';
+        echo '<p class="description">' . esc_html__( 'Enter one regular expression per line without regex delimiters. The plugin adds them automatically. Invalid lines are rejected with a warning when settings are saved.', 'proof-of-work-captcha' ) . '</p>';
+        echo '<p class="description"><strong>' . esc_html__( 'Example:', 'proof-of-work-captcha' ) . '</strong> <code>^/\\?s=</code> ' . esc_html__( 'protects the WordPress search page.', 'proof-of-work-captcha' ) . '</p>';
     }
 
     /**
