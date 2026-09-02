@@ -4,7 +4,7 @@ Tags: captcha, proof of work, anti-spam, security, login
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.11
+Stable tag: 2.5.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -84,6 +84,10 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 
 == Changelog ==
 
+= 2.5.12 =
+
+* Added the proof-of-work security check to WooCommerce checkout account registration.
+
 = 2.5.11 =
 
 * URL protection patterns no longer accept or require PHP regex delimiters.
@@ -99,6 +103,10 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 * Improved standalone early-gateway localization and visitor-facing messages.
 
 == Upgrade Notice ==
+
+= 2.5.12 =
+
+Ensures customers creating an account during WooCommerce checkout can complete the required security check.
 
 = 2.5.10 =
 

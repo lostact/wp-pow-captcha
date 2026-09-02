@@ -56,6 +56,7 @@ class PoW_Captcha_Form_Protection {
 
         if ( in_array( 'woocommerce_register', $protected_forms, true ) ) {
             add_action( 'woocommerce_register_form', array( $this, 'inject_hidden_fields' ) );
+            add_action( 'woocommerce_after_checkout_registration_form', array( $this, 'inject_checkout_registration_fields' ) );
             add_filter( 'woocommerce_registration_errors', array( $this, 'verify_registration' ), 10, 3 );
         }
 
@@ -124,6 +125,24 @@ class PoW_Captcha_Form_Protection {
             <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'proof-of-work-captcha' ); ?>" aria-busy="true" hidden><span></span></div>
             <p class="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Preparing security check…', 'proof-of-work-captcha' ); ?></p>
             <p class="pow-details" hidden><?php esc_html_e( 'Requesting a fresh challenge…', 'proof-of-work-captcha' ); ?></p>
+        </div>
+        <?php
+    }
+
+    /**
+     * Inject the PoW fields into WooCommerce's optional checkout registration
+     * section. WooCommerce applies the same registration-errors filter to
+     * My Account and checkout registrations, so both forms must carry a
+     * challenge. The create-account class lets WooCommerce show and hide the
+     * challenge together with the optional account fields.
+     *
+     * @param WC_Checkout $checkout Checkout instance supplied by WooCommerce.
+     */
+    public function inject_checkout_registration_fields( $checkout ) {
+        unset( $checkout );
+        ?>
+        <div class="create-account pow-captcha-checkout-registration">
+            <?php $this->inject_hidden_fields(); ?>
         </div>
         <?php
     }
