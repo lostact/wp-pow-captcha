@@ -1,10 +1,10 @@
-=== Proof of Work Captcha ===
+=== Proof-of-Work Firewall ===
 Contributors: lostact
 Tags: captcha, proof of work, anti-spam, security, login
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.12
+Stable tag: 2.5.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Protect configurable URLs and WordPress forms with private, self-hosted proof-of
 
 == Description ==
 
-Proof of Work Captcha protects resource-intensive pages and common WordPress forms from automated bots. A visitor's browser completes a configurable SHA-256 proof-of-work challenge before the protected request is accepted.
+Proof-of-Work Firewall protects resource-intensive pages and common WordPress forms from automated bots. A visitor's browser completes a configurable SHA-256 proof-of-work challenge before the protected request is accepted.
 
 Challenge generation and verification run on your site. No CAPTCHA account, API key, or external CAPTCHA provider is required.
 
@@ -29,7 +29,7 @@ Challenge generation and verification run on your site. No CAPTCHA account, API 
 * Optionally challenge protected URLs early through a managed advanced-cache gateway.
 * Benchmark the current browser and estimate solve times from the settings page.
 * Display progress, attempts, hash rate, and elapsed time while solving.
-* Includes complete Persian translation and RTL support.
+* Supports translated language packs and RTL layouts.
 
 = Privacy =
 
@@ -48,9 +48,9 @@ Proof of work increases the cost of automated requests but is not a complete DDo
 
 == Installation ==
 
-1. Install Proof of Work Captcha from the WordPress plugin directory, or upload its ZIP from Plugins > Add New Plugin > Upload Plugin.
+1. Install Proof-of-Work Firewall from the WordPress plugin directory, or upload its ZIP from Plugins > Add New Plugin > Upload Plugin.
 2. Activate the plugin.
-3. Open Settings > PoW Captcha.
+3. Open Settings > PoW Firewall.
 4. Select the forms to protect and configure their difficulty.
 5. Add one undelimited regular expression per line for URLs that should be protected.
 6. Select the challenge trigger and adjust expiry and query-length settings as needed.
@@ -76,7 +76,7 @@ It is an optional advanced-cache gateway that can reject unsolved protected URL 
 
 = Does the plugin work behind Cloudflare? =
 
-Yes. It trusts Cloudflare forwarding headers only when the direct peer belongs to an official Cloudflare proxy range. Other trusted proxy ranges can be provided with the pow_captcha_trusted_proxy_ranges filter.
+Yes. It trusts Cloudflare forwarding headers only when the direct peer belongs to an official Cloudflare proxy range. Other trusted proxy ranges can be provided with the pow_firewall_trusted_proxy_ranges filter.
 
 = Why is a visitor asked to solve another challenge? =
 
@@ -84,9 +84,12 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 
 == Changelog ==
 
-= 2.5.12 =
+= 2.5.13 =
 
-* Added the proof-of-work security check to WooCommerce checkout account registration.
+* Renamed the plugin to Proof-of-Work Firewall with a matching text domain and unique prefixes.
+* Replaced directly printed admin JavaScript with an enqueued script configuration.
+* Migrated legacy options, hooks, cookies, asset handles, and browser globals to collision-resistant names.
+* Removed bundled translation catalogs in favor of WordPress.org language packs.
 
 = 2.5.11 =
 
@@ -104,7 +107,7 @@ URL clearance expires, is bound to the visitor IP, and cannot outlive the signed
 
 == Upgrade Notice ==
 
-= 2.5.12 =
+= 2.5.13 =
 
 Ensures customers creating an account during WooCommerce checkout can complete the required security check.
 

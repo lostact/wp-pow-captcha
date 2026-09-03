@@ -7,19 +7,19 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class PoW_Captcha_URL_Protection {
+class PoW_Firewall_URL_Protection {
 
     /**
-     * @var PoW_Captcha_Challenge
+     * @var PoW_Firewall_Challenge
      */
     private $challenge;
 
     /**
      * Constructor.
      *
-     * @param PoW_Captcha_Challenge $challenge Challenge instance.
+     * @param PoW_Firewall_Challenge $challenge Challenge instance.
      */
-    public function __construct( PoW_Captcha_Challenge $challenge ) {
+    public function __construct( PoW_Firewall_Challenge $challenge ) {
         $this->challenge = $challenge;
         add_action( 'template_redirect', array( $this, 'intercept' ) );
     }
@@ -29,11 +29,11 @@ class PoW_Captcha_URL_Protection {
      */
     public function intercept() {
         // The advanced-cache gateway already validated this matching request.
-        if ( defined( 'POW_CAPTCHA_EARLY_PASSED' ) && POW_CAPTCHA_EARLY_PASSED ) {
+        if ( defined( 'POW_FIREWALL_EARLY_PASSED' ) && POW_FIREWALL_EARLY_PASSED ) {
             return;
         }
 
-        $patterns = get_option( 'pow_url_patterns', array() );
+        $patterns = get_option( 'pow_firewall_url_patterns', array() );
 
         if ( empty( $patterns ) || ! is_array( $patterns ) ) {
             return;
@@ -54,16 +54,16 @@ class PoW_Captcha_URL_Protection {
             return;
         }
 
-        $maximum_query_length = (int) get_option( 'pow_max_query_length', 0 );
+        $maximum_query_length = (int) get_option( 'pow_firewall_max_query_length', 0 );
         if ( $maximum_query_length > 0 && $this->query_string_length( $request_uri ) > $maximum_query_length ) {
             $this->block_long_query();
         }
 
-        $secret_key = get_option( 'pow_secret_key', '' );
+        $secret_key = get_option( 'pow_firewall_secret_key', '' );
 
         // Check the signed, server-expiring, IP-bound clearance cookie.
-        if ( isset( $_COOKIE['pow_cleared'] ) ) {
-            $cookie_value = sanitize_text_field( wp_unslash( $_COOKIE['pow_cleared'] ) );
+        if ( isset( $_COOKIE['pow_firewall_cleared'] ) ) {
+            $cookie_value = sanitize_text_field( wp_unslash( $_COOKIE['pow_firewall_cleared'] ) );
             $parts        = explode( ':', $cookie_value );
 
             if ( 4 === count( $parts ) ) {
@@ -72,19 +72,19 @@ class PoW_Captcha_URL_Protection {
                 $nonce   = sanitize_text_field( $parts[2] );
                 $hmac    = sanitize_text_field( $parts[3] );
 
-                $maximum_lifetime = max( 30, min( 3600, (int) get_option( 'pow_expiry_time', 300 ) ) );
+                $maximum_lifetime = max( 30, min( 3600, (int) get_option( 'pow_firewall_expiry_time', 300 ) ) );
                 $valid_window     = $expires >= time() && $expires <= time() + $maximum_lifetime;
                 $valid_nonce      = 32 === strlen( $nonce ) && ctype_xdigit( $nonce );
-                $payload          = implode( ':', array( $version, 'cleared', $expires, $nonce, PoW_Captcha_Challenge::client_ip() ) );
+                $payload          = implode( ':', array( $version, 'cleared', $expires, $nonce, PoW_Firewall_Challenge::client_ip() ) );
                 $expected_hmac    = hash_hmac( 'sha256', $payload, $secret_key );
 
-                if ( PoW_Captcha_Challenge::VERSION === $version && $valid_window && $valid_nonce && hash_equals( $expected_hmac, $hmac ) ) {
+                if ( PoW_Firewall_Challenge::VERSION === $version && $valid_window && $valid_nonce && hash_equals( $expected_hmac, $hmac ) ) {
                     return;
                 }
             }
 
             // Remove malformed, expired, legacy, or IP-mismatched clearances.
-            setcookie( 'pow_cleared', '', array(
+            setcookie( 'pow_firewall_cleared', '', array(
                 'expires'  => time() - HOUR_IN_SECONDS,
                 'path'     => COOKIEPATH,
                 'domain'   => COOKIE_DOMAIN,
@@ -95,12 +95,12 @@ class PoW_Captcha_URL_Protection {
         }
 
         // Check for solution cookie.
-        if ( isset( $_COOKIE['pow_solution'] ) ) {
-            $cookie_value = sanitize_text_field( wp_unslash( $_COOKIE['pow_solution'] ) );
+        if ( isset( $_COOKIE['pow_firewall_solution'] ) ) {
+            $cookie_value = sanitize_text_field( wp_unslash( $_COOKIE['pow_firewall_solution'] ) );
             $parts        = explode( ':', $cookie_value );
 
-            // Delete the pow_solution cookie immediately regardless of outcome.
-            setcookie( 'pow_solution', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN );
+            // Delete the pow_firewall_solution cookie immediately regardless of outcome.
+            setcookie( 'pow_firewall_solution', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN );
 
             if ( 7 === count( $parts ) ) {
                 $challenge  = sanitize_text_field( $parts[0] );
@@ -111,16 +111,16 @@ class PoW_Captcha_URL_Protection {
                 $sig        = sanitize_text_field( $parts[5] );
                 $solution   = $parts[6];
 
-                if ( PoW_Captcha_Challenge::VERSION === $version && ctype_digit( $solution ) ) {
+                if ( PoW_Firewall_Challenge::VERSION === $version && ctype_digit( $solution ) ) {
                     if ( $this->challenge->verify( $challenge, $expires, $difficulty, $sig, $solution, $version, $algorithm ) ) {
                         // Clearance cannot outlive the original signed challenge
                         // and is valid only from the IP that received that challenge.
                         $nonce            = bin2hex( random_bytes( 16 ) );
-                        $clearance_payload = implode( ':', array( $version, 'cleared', $expires, $nonce, PoW_Captcha_Challenge::client_ip() ) );
+                        $clearance_payload = implode( ':', array( $version, 'cleared', $expires, $nonce, PoW_Firewall_Challenge::client_ip() ) );
                         $cleared_hmac      = hash_hmac( 'sha256', $clearance_payload, $secret_key );
                         $cleared_value     = implode( ':', array( $version, $expires, $nonce, $cleared_hmac ) );
 
-                        setcookie( 'pow_cleared', $cleared_value, array(
+                        setcookie( 'pow_firewall_cleared', $cleared_value, array(
                             'expires'  => $expires,
                             'path'     => COOKIEPATH,
                             'domain'   => COOKIE_DOMAIN,
@@ -154,13 +154,13 @@ class PoW_Captcha_URL_Protection {
     public static function compile_pattern( $pattern, &$error = null ): ?string {
         $error = null;
         if ( ! is_string( $pattern ) || '' === trim( $pattern ) ) {
-            $error = __( 'The pattern is empty.', 'proof-of-work-captcha' );
+            $error = __( 'The pattern is empty.', 'proof-of-work-firewall' );
             return null;
         }
 
         $pattern = trim( $pattern );
         if ( 1 === preg_match( '/^([\/~#%!@;`]).+\1[a-zA-Z]*$/s', $pattern ) ) {
-            $error = __( 'Remove the regex delimiters; the plugin adds them automatically.', 'proof-of-work-captcha' );
+            $error = __( 'Remove the regex delimiters; the plugin adds them automatically.', 'proof-of-work-firewall' );
             return null;
         }
 
@@ -203,7 +203,7 @@ class PoW_Captcha_URL_Protection {
         status_header( 414 );
         header( 'Content-Type: text/plain; charset=UTF-8' );
         header( 'X-Robots-Tag: noindex, nofollow', true );
-        echo esc_html__( 'Request blocked: query string is too long.', 'proof-of-work-captcha' );
+        echo esc_html__( 'Request blocked: query string is too long.', 'proof-of-work-firewall' );
         exit;
     }
 
@@ -213,10 +213,10 @@ class PoW_Captcha_URL_Protection {
      * @param bool $error Whether the previous solution failed.
      */
     private function show_challenge( bool $error ) {
-        $difficulty = (int) get_option( 'pow_url_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
-        $difficulty = PoW_Captcha_Challenge::clamp_difficulty( $difficulty );
+        $difficulty = (int) get_option( 'pow_firewall_url_difficulty', PoW_Firewall_Challenge::DEFAULT_DIFFICULTY );
+        $difficulty = PoW_Firewall_Challenge::clamp_difficulty( $difficulty );
         $challenge  = $this->challenge->generate( $difficulty );
-        $interaction_mode = (string) get_option( 'pow_interaction_mode', 'automatic' );
+        $interaction_mode = (string) get_option( 'pow_firewall_interaction_mode', 'automatic' );
         if ( ! in_array( $interaction_mode, array( 'automatic', 'mouse', 'checkbox' ), true ) ) {
             $interaction_mode = 'automatic';
         }
@@ -224,23 +224,23 @@ class PoW_Captcha_URL_Protection {
         $is_secure = is_ssl();
 
         $plugin_url = plugin_dir_url( dirname( __FILE__ ) );
-        wp_enqueue_style( 'pow-captcha-challenge', $plugin_url . 'assets/pow-challenge.css', array(), POW_CAPTCHA_VERSION );
-        if ( pow_captcha_is_persian() ) {
-            wp_enqueue_style( 'pow-captcha-vazirmatn', 'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap', array(), POW_CAPTCHA_VERSION );
+        wp_enqueue_style( 'pow-firewall-challenge', $plugin_url . 'assets/pow-firewall-challenge.css', array(), POW_FIREWALL_VERSION );
+        if ( pow_firewall_is_persian() ) {
+            wp_enqueue_style( 'pow-firewall-vazirmatn', 'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap', array(), POW_FIREWALL_VERSION );
         }
-        wp_enqueue_script( 'pow-solver', $plugin_url . 'assets/pow-solver.js', array(), POW_CAPTCHA_VERSION, true );
+        wp_enqueue_script( 'pow-firewall-solver', $plugin_url . 'assets/pow-firewall-solver.js', array(), POW_FIREWALL_VERSION, true );
         wp_add_inline_script(
-            'pow-solver',
-            'window.powChallenge=' . wp_json_encode( $challenge['challenge'] ) . ';' .
-            'window.powExpires=' . absint( $challenge['expires'] ) . ';' .
-            'window.powDifficulty=' . absint( $challenge['difficulty'] ) . ';' .
-            'window.powVersion=' . absint( $challenge['version'] ) . ';' .
-            'window.powAlgorithm=' . wp_json_encode( $challenge['algorithm'] ) . ';' .
-            'window.powSig=' . wp_json_encode( $challenge['signature'] ) . ';' .
-            'window.powInteractionMode=' . wp_json_encode( $interaction_mode ) . ';' .
-            'window.powDebugProgress=' . wp_json_encode( (bool) get_option( 'pow_debug_progress', false ) ) . ';' .
-            'window.powI18n=' . wp_json_encode( pow_captcha_frontend_translations() ) . ';' .
-            'window.powWorkerUrl=' . wp_json_encode( add_query_arg( 'ver', POW_CAPTCHA_VERSION, $plugin_url . 'assets/pow-worker.js' ) ) . ';',
+            'pow-firewall-solver',
+            'window.powFirewallChallenge=' . wp_json_encode( $challenge['challenge'] ) . ';' .
+            'window.powFirewallExpires=' . absint( $challenge['expires'] ) . ';' .
+            'window.powFirewallDifficulty=' . absint( $challenge['difficulty'] ) . ';' .
+            'window.powFirewallVersion=' . absint( $challenge['version'] ) . ';' .
+            'window.powFirewallAlgorithm=' . wp_json_encode( $challenge['algorithm'] ) . ';' .
+            'window.powFirewallSig=' . wp_json_encode( $challenge['signature'] ) . ';' .
+            'window.powFirewallInteractionMode=' . wp_json_encode( $interaction_mode ) . ';' .
+            'window.powFirewallDebugProgress=' . wp_json_encode( (bool) get_option( 'pow_firewall_debug_progress', false ) ) . ';' .
+            'window.powFirewallI18n=' . wp_json_encode( pow_firewall_frontend_translations() ) . ';' .
+            'window.powFirewallWorkerUrl=' . wp_json_encode( add_query_arg( 'ver', POW_FIREWALL_VERSION, $plugin_url . 'assets/pow-firewall-worker.js' ) ) . ';',
             'before'
         );
 

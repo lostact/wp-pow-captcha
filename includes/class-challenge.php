@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class PoW_Captcha_Challenge {
+class PoW_Firewall_Challenge {
 
     /** Current IP-bound challenge protocol version. */
     public const VERSION = 3;
@@ -63,7 +63,7 @@ class PoW_Captcha_Challenge {
 
     /** Constructor: retrieve the secret key from wp_options. */
     public function __construct() {
-        $this->secret_key = get_option( 'pow_secret_key', '' );
+        $this->secret_key = get_option( 'pow_firewall_secret_key', '' );
     }
 
     /**
@@ -78,7 +78,7 @@ class PoW_Captcha_Challenge {
     public function generate( int $difficulty ): array {
         $difficulty  = self::clamp_difficulty( $difficulty );
         $challenge   = bin2hex( random_bytes( 16 ) );
-        $expiry_time = (int) get_option( 'pow_expiry_time', 300 );
+        $expiry_time = (int) get_option( 'pow_firewall_expiry_time', 300 );
         $expires     = time() + $expiry_time;
         $version     = self::VERSION;
         $algorithm   = self::ALGORITHM;
@@ -169,7 +169,7 @@ class PoW_Captcha_Challenge {
      * the direct peer belongs to a trusted proxy range.
      *
      * Extra proxy CIDRs (for example a Cloudflare Tunnel local peer) may be
-     * supplied with the pow_captcha_trusted_proxy_ranges filter.
+     * supplied with the pow_firewall_trusted_proxy_ranges filter.
      */
     public static function client_ip(): string {
         $remote_ip = self::normalize_ip( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '' );
@@ -177,7 +177,7 @@ class PoW_Captcha_Challenge {
             return 'unknown';
         }
 
-        $trusted_ranges = apply_filters( 'pow_captcha_trusted_proxy_ranges', self::CLOUDFLARE_RANGES );
+        $trusted_ranges = apply_filters( 'pow_firewall_trusted_proxy_ranges', self::CLOUDFLARE_RANGES );
         if ( is_array( $trusted_ranges ) && self::ip_in_ranges( $remote_ip, $trusted_ranges ) ) {
             // Pseudo IPv4 overwrite mode preserves the real IPv6 address here.
             $connecting_ipv6 = self::normalize_ip( isset( $_SERVER['HTTP_CF_CONNECTING_IPV6'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IPV6'] ) ) : '' );

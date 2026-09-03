@@ -1,11 +1,11 @@
 /**
- * Proof of Work Captcha — admin benchmark and difficulty calculator.
+ * Proof-of-Work Firewall — admin benchmark and difficulty calculator.
  */
 (function () {
     'use strict';
 
     function translate(key, fallback) {
-        return window.powAdminI18n && typeof window.powAdminI18n[key] === 'string' ? window.powAdminI18n[key] : fallback;
+        return window.powFirewallAdminI18n && typeof window.powFirewallAdminI18n[key] === 'string' ? window.powFirewallAdminI18n[key] : fallback;
     }
 
     function interpolate(template) {
@@ -15,7 +15,7 @@
         }, template);
     }
 
-    var STORAGE_KEY = 'wpPowCaptchaHashRateV2';
+    var STORAGE_KEY = 'powFirewallHashRateV2';
     var worker = null;
     var rejectActiveSolve = null;
     var cancelled = false;
@@ -80,6 +80,46 @@
         } catch (error) {
             // Storage can be unavailable in privacy modes; the live result still works.
         }
+    }
+
+
+    function configureSecretReset() {
+        var config = window.powFirewallAdminI18n;
+        var button = document.getElementById('pow-reset-secret-key');
+        var display = document.getElementById('pow-secret-key-display');
+        if (!config || !button || !display) {
+            return;
+        }
+        button.addEventListener('click', function () {
+            if (!window.confirm(translate('resetConfirm', 'Reset the secret key?'))) {
+                return;
+            }
+            button.disabled = true;
+            button.textContent = translate('resetting', 'Resetting…');
+            var body = new URLSearchParams({
+                action: 'pow_firewall_reset_secret_key',
+                _ajax_nonce: config.resetNonce
+            });
+            fetch(config.ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: body.toString()
+            }).then(function (response) {
+                return response.json();
+            }).then(function (response) {
+                if (!response.success) {
+                    throw new Error(response.data && response.data.message ? response.data.message : translate('resetFailed', 'Failed to reset secret key.'));
+                }
+                display.textContent = response.data.display_key;
+                window.alert(translate('resetSuccess', 'Secret key has been reset successfully.'));
+            }).catch(function (error) {
+                window.alert(error.message || translate('resetError', 'An error occurred while resetting the secret key.'));
+            }).finally(function () {
+                button.disabled = false;
+                button.textContent = translate('resetLabel', 'Reset Secret Key');
+            });
+        });
     }
 
     function randomChallenge() {
@@ -278,6 +318,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        configureSecretReset();
         var card = document.getElementById('pow-benchmark');
         updateDifficultyControls();
         if (!card) {

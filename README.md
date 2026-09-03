@@ -1,6 +1,6 @@
-# Proof of Work Captcha
+# Proof-of-Work Firewall
 
-The main goal of Proof of Work Captcha is to protect resource-consuming website pages from automated bots. It also provides an additional layer of protection against login brute forcing, automated registrations, and comment spam.
+The main goal of Proof-of-Work Firewall is to protect resource-consuming website pages from automated bots. It also provides an additional layer of protection against login brute forcing, automated registrations, and comment spam.
 
 The plugin requires a visitor's browser to complete a configurable proof-of-work challenge before a protected request is accepted. Verification is inexpensive for the server, while automated traffic must spend computational effort.
 
@@ -12,7 +12,7 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 - Fine-grained difficulty control with small, predictable increments.
 - Browser progress indicator with attempts, hash rate, and elapsed time.
 - Automatic, genuine mouse-movement, or verification-checkbox challenge triggers.
-- Complete Persian (`fa_IR`) translation for admin screens, forms, standard challenges, and the early gateway.
+- Translation-ready interfaces and RTL layout support.
 - Persian CAPTCHA interfaces use the Vazirmatn font from Google Fonts, with a local fallback when it is unavailable.
 - Admin benchmark and estimated solve-time table.
 - Stateless HMAC-signed challenges with server-enforced expiration.
@@ -36,7 +36,7 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 
 ## How lowest-resource mode works
 
-- WordPress settings are compiled into a generated `wp-content/pow-captcha-runtime.php` configuration whenever relevant options change.
+- WordPress settings are compiled into a generated `wp-content/pow-firewall-runtime.php` configuration whenever relevant options change.
 - The early `wp-content/advanced-cache.php` gateway reads this PHP configuration directly, so an unsolved request normally performs zero database queries.
 - Unsolved protected requests receive the standalone challenge before ordinary plugins, the theme, routing, and the main query load; cleared requests continue into WordPress normally.
 - Configuration writes are atomic, missing files fail open to standard protection, and an existing foreign `advanced-cache.php` is never overwritten.
@@ -46,14 +46,14 @@ The plugin requires a visitor's browser to complete a configurable proof-of-work
 1. Download the installer from the [latest GitHub release](https://github.com/lostact/proof-of-work-captcha/releases/latest).
 2. In WordPress, open **Plugins → Add New Plugin → Upload Plugin**.
 3. Upload the ZIP and activate it.
-4. Open **Settings → PoW Captcha** to configure forms, URL patterns, difficulty, and expiry.
+4. Open **Settings → PoW Firewall** to configure forms, URL patterns, difficulty, and expiry.
 5. Optionally enable **Lowest-resource URL Protection**. Automatic setup requires writable WordPress configuration/content files and an unused `advanced-cache.php` slot.
 
 ## Important limitations
 
 Proof of work increases attacker cost but is not a complete DDoS solution. It cannot stop volumetric attacks, prevent a powerful remote machine from solving separate challenges for bots, or protect requests handled before WordPress loads. Use it together with a CDN/WAF, reverse-proxy rate limiting, and origin firewall rules.
 
-When using Cloudflare, restrict direct access to the origin. The plugin trusts `CF-Connecting-IP` only when the direct peer is in Cloudflare's official proxy ranges. Custom trusted proxies can be added with the `pow_captcha_trusted_proxy_ranges` WordPress filter.
+When using Cloudflare, restrict direct access to the origin. The plugin trusts `CF-Connecting-IP` only when the direct peer is in Cloudflare's official proxy ranges. Custom trusted proxies can be added with the `pow_firewall_trusted_proxy_ranges` WordPress filter.
 
 ## Requirements
 

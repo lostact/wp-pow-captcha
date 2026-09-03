@@ -7,25 +7,25 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class PoW_Captcha_Form_Protection {
+class PoW_Firewall_Form_Protection {
 
     /**
-     * @var PoW_Captcha_Challenge
+     * @var PoW_Firewall_Challenge
      */
     private $challenge;
 
     /** @var WP_Error|null Cached fail-fast login PoW error for this request. */
-    private $login_pow_error = null;
+    private $login_pow_firewall_error = null;
 
     /**
      * Constructor.
      *
-     * @param PoW_Captcha_Challenge $challenge Challenge instance.
+     * @param PoW_Firewall_Challenge $challenge Challenge instance.
      */
-    public function __construct( PoW_Captcha_Challenge $challenge ) {
+    public function __construct( PoW_Firewall_Challenge $challenge ) {
         $this->challenge = $challenge;
 
-        $protected_forms = get_option( 'pow_protected_forms', array() );
+        $protected_forms = get_option( 'pow_firewall_protected_forms', array() );
 
         if ( ! is_array( $protected_forms ) ) {
             $protected_forms = array();
@@ -34,7 +34,7 @@ class PoW_Captcha_Form_Protection {
         if ( in_array( 'login', $protected_forms, true ) ) {
             add_action( 'login_form', array( $this, 'inject_hidden_fields' ) );
             add_filter( 'authenticate', array( $this, 'verify_login_early' ), 5, 3 );
-            add_filter( 'authenticate', array( $this, 'enforce_login_pow_result' ), PHP_INT_MAX, 3 );
+            add_filter( 'authenticate', array( $this, 'enforce_login_pow_firewall_result' ), PHP_INT_MAX, 3 );
             add_action( 'login_enqueue_scripts', array( $this, 'enqueue_assets' ) );
         }
 
@@ -64,8 +64,8 @@ class PoW_Captcha_Form_Protection {
         // endpoint when any form protection is active.
         if ( ! empty( $protected_forms ) ) {
             add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-            add_action( 'wp_ajax_nopriv_pow_captcha_challenge', array( $this, 'ajax_generate_challenge' ) );
-            add_action( 'wp_ajax_pow_captcha_challenge', array( $this, 'ajax_generate_challenge' ) );
+            add_action( 'wp_ajax_nopriv_pow_firewall_firewall_challenge', array( $this, 'ajax_generate_challenge' ) );
+            add_action( 'wp_ajax_pow_firewall_firewall_challenge', array( $this, 'ajax_generate_challenge' ) );
         }
     }
 
@@ -75,37 +75,37 @@ class PoW_Captcha_Form_Protection {
     public function enqueue_assets() {
         $plugin_url = plugin_dir_url( dirname( __FILE__ ) );
 
-        if ( pow_captcha_is_persian() ) {
+        if ( pow_firewall_is_persian() ) {
             wp_enqueue_style(
-                'pow-captcha-vazirmatn',
+                'pow-firewall-vazirmatn',
                 'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap',
                 array(),
-                POW_CAPTCHA_VERSION
+                POW_FIREWALL_VERSION
             );
         }
 
         wp_enqueue_style(
-            'pow-captcha',
-            $plugin_url . 'assets/pow-captcha.css',
+            'pow-firewall',
+            $plugin_url . 'assets/pow-firewall.css',
             array(),
-            POW_CAPTCHA_VERSION
+            POW_FIREWALL_VERSION
         );
 
         wp_enqueue_script(
-            'pow-solver',
-            $plugin_url . 'assets/pow-solver.js',
+            'pow-firewall-solver',
+            $plugin_url . 'assets/pow-firewall-solver.js',
             array(),
-            POW_CAPTCHA_VERSION,
+            POW_FIREWALL_VERSION,
             true
         );
 
-        wp_localize_script( 'pow-solver', 'powConfig', array(
-            'workerUrl'       => add_query_arg( 'ver', POW_CAPTCHA_VERSION, $plugin_url . 'assets/pow-worker.js' ),
-            'challengeUrl'    => admin_url( 'admin-ajax.php?action=pow_captcha_challenge' ),
-            'interactionMode' => (string) get_option( 'pow_interaction_mode', 'automatic' ),
-            'debugProgress'   => (bool) get_option( 'pow_debug_progress', false ),
+        wp_localize_script( 'pow-firewall-solver', 'powFirewallConfig', array(
+            'workerUrl'       => add_query_arg( 'ver', POW_FIREWALL_VERSION, $plugin_url . 'assets/pow-firewall-worker.js' ),
+            'challengeUrl'    => admin_url( 'admin-ajax.php?action=pow_firewall_challenge' ),
+            'interactionMode' => (string) get_option( 'pow_firewall_interaction_mode', 'automatic' ),
+            'debugProgress'   => (bool) get_option( 'pow_firewall_debug_progress', false ),
         ) );
-        wp_localize_script( 'pow-solver', 'powI18n', pow_captcha_frontend_translations() );
+        wp_localize_script( 'pow-firewall-solver', 'powFirewallI18n', pow_firewall_frontend_translations() );
     }
 
     /**
@@ -113,18 +113,18 @@ class PoW_Captcha_Form_Protection {
      */
     public function inject_hidden_fields() {
         ?>
-        <div class="pow-captcha" data-pow-state="loading" dir="<?php echo esc_attr( pow_captcha_text_direction() ); ?>">
-            <input type="hidden" name="_pow_challenge" value="">
-            <input type="hidden" name="_pow_expires" value="">
-            <input type="hidden" name="_pow_difficulty" value="">
-            <input type="hidden" name="_pow_version" value="">
-            <input type="hidden" name="_pow_algorithm" value="">
-            <input type="hidden" name="_pow_sig" value="">
-            <input type="hidden" name="_pow_solution" value="">
-            <?php wp_nonce_field( 'pow_captcha_form', '_pow_nonce', false ); ?>
-            <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'proof-of-work-captcha' ); ?>" aria-busy="true" hidden><span></span></div>
-            <p class="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Preparing security check…', 'proof-of-work-captcha' ); ?></p>
-            <p class="pow-details" hidden><?php esc_html_e( 'Requesting a fresh challenge…', 'proof-of-work-captcha' ); ?></p>
+        <div class="pow-firewall" data-pow-state="loading" dir="<?php echo esc_attr( pow_firewall_text_direction() ); ?>">
+            <input type="hidden" name="_pow_firewall_challenge" value="">
+            <input type="hidden" name="_pow_firewall_expires" value="">
+            <input type="hidden" name="_pow_firewall_difficulty" value="">
+            <input type="hidden" name="_pow_firewall_version" value="">
+            <input type="hidden" name="_pow_firewall_algorithm" value="">
+            <input type="hidden" name="_pow_firewall_sig" value="">
+            <input type="hidden" name="_pow_firewall_firewall_solution" value="">
+            <?php wp_nonce_field( 'pow_firewall_form', '_pow_firewall_nonce', false ); ?>
+            <div class="pow-progress" role="progressbar" aria-label="<?php esc_attr_e( 'Security check in progress', 'proof-of-work-firewall' ); ?>" aria-busy="true" hidden><span></span></div>
+            <p class="pow-status" role="status" aria-live="polite"><?php esc_html_e( 'Preparing security check…', 'proof-of-work-firewall' ); ?></p>
+            <p class="pow-details" hidden><?php esc_html_e( 'Requesting a fresh challenge…', 'proof-of-work-firewall' ); ?></p>
         </div>
         <?php
     }
@@ -141,7 +141,7 @@ class PoW_Captcha_Form_Protection {
     public function inject_checkout_registration_fields( $checkout ) {
         unset( $checkout );
         ?>
-        <div class="create-account pow-captcha-checkout-registration">
+        <div class="create-account pow-firewall-checkout-registration">
             <?php $this->inject_hidden_fields(); ?>
         </div>
         <?php
@@ -153,24 +153,24 @@ class PoW_Captcha_Form_Protection {
      * @return bool True if verification passes, false otherwise.
      */
     public function verify_from_post(): bool {
-        if ( ! isset( $_POST['_pow_nonce'], $_POST['_pow_challenge'], $_POST['_pow_expires'], $_POST['_pow_difficulty'], $_POST['_pow_version'], $_POST['_pow_algorithm'], $_POST['_pow_sig'], $_POST['_pow_solution'] ) ) {
+        if ( ! isset( $_POST['_pow_firewall_nonce'], $_POST['_pow_firewall_challenge'], $_POST['_pow_firewall_expires'], $_POST['_pow_firewall_difficulty'], $_POST['_pow_firewall_version'], $_POST['_pow_firewall_algorithm'], $_POST['_pow_firewall_sig'], $_POST['_pow_firewall_firewall_solution'] ) ) {
             return false;
         }
 
-        $nonce = sanitize_text_field( wp_unslash( $_POST['_pow_nonce'] ) );
-        if ( ! wp_verify_nonce( $nonce, 'pow_captcha_form' ) ) {
+        $nonce = sanitize_text_field( wp_unslash( $_POST['_pow_firewall_nonce'] ) );
+        if ( ! wp_verify_nonce( $nonce, 'pow_firewall_form' ) ) {
             return false;
         }
 
-        $challenge  = sanitize_text_field( wp_unslash( $_POST['_pow_challenge'] ) );
-        $expires    = absint( wp_unslash( $_POST['_pow_expires'] ) );
-        $difficulty = absint( wp_unslash( $_POST['_pow_difficulty'] ) );
-        $version    = absint( wp_unslash( $_POST['_pow_version'] ) );
-        $algorithm  = sanitize_text_field( wp_unslash( $_POST['_pow_algorithm'] ) );
-        $sig        = sanitize_text_field( wp_unslash( $_POST['_pow_sig'] ) );
-        $solution   = sanitize_text_field( wp_unslash( $_POST['_pow_solution'] ) );
+        $challenge  = sanitize_text_field( wp_unslash( $_POST['_pow_firewall_challenge'] ) );
+        $expires    = absint( wp_unslash( $_POST['_pow_firewall_expires'] ) );
+        $difficulty = absint( wp_unslash( $_POST['_pow_firewall_difficulty'] ) );
+        $version    = absint( wp_unslash( $_POST['_pow_firewall_version'] ) );
+        $algorithm  = sanitize_text_field( wp_unslash( $_POST['_pow_firewall_algorithm'] ) );
+        $sig        = sanitize_text_field( wp_unslash( $_POST['_pow_firewall_sig'] ) );
+        $solution   = sanitize_text_field( wp_unslash( $_POST['_pow_firewall_firewall_solution'] ) );
 
-        if ( PoW_Captcha_Challenge::VERSION !== $version || ! ctype_digit( $solution ) ) {
+        if ( PoW_Firewall_Challenge::VERSION !== $version || ! ctype_digit( $solution ) ) {
             return false;
         }
 
@@ -183,8 +183,8 @@ class PoW_Captcha_Form_Protection {
         header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
         header( 'Pragma: no-cache' );
 
-        $difficulty = (int) get_option( 'pow_form_difficulty', PoW_Captcha_Challenge::DEFAULT_DIFFICULTY );
-        $challenge  = $this->challenge->generate( PoW_Captcha_Challenge::clamp_difficulty( $difficulty ) );
+        $difficulty = (int) get_option( 'pow_firewall_form_difficulty', PoW_Firewall_Challenge::DEFAULT_DIFFICULTY );
+        $challenge  = $this->challenge->generate( PoW_Firewall_Challenge::clamp_difficulty( $difficulty ) );
 
         wp_send_json_success( $challenge );
     }
@@ -205,17 +205,17 @@ class PoW_Captcha_Form_Protection {
             return $user;
         }
 
-        $this->login_pow_error = new WP_Error( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-captcha' ) );
+        $this->login_pow_firewall_error = new WP_Error( 'pow_firewall_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-firewall' ) );
 
         remove_filter( 'authenticate', 'wp_authenticate_username_password', 20 );
         remove_filter( 'authenticate', 'wp_authenticate_email_password', 20 );
 
-        return $this->login_pow_error;
+        return $this->login_pow_firewall_error;
     }
 
     /** Ensure no later authentication provider can overwrite a PoW failure. */
-    public function enforce_login_pow_result( $user, string $username, string $password ) {
-        return $this->login_pow_error instanceof WP_Error ? $this->login_pow_error : $user;
+    public function enforce_login_pow_firewall_result( $user, string $username, string $password ) {
+        return $this->login_pow_firewall_error instanceof WP_Error ? $this->login_pow_firewall_error : $user;
     }
 
     /**
@@ -227,8 +227,8 @@ class PoW_Captcha_Form_Protection {
     public function verify_comment( array $commentdata ): array {
         if ( ! $this->verify_from_post() ) {
             wp_die(
-                esc_html__( 'Security check failed. Please go back and try again.', 'proof-of-work-captcha' ),
-                esc_html__( 'Security Check Failed', 'proof-of-work-captcha' ),
+                esc_html__( 'Security check failed. Please go back and try again.', 'proof-of-work-firewall' ),
+                esc_html__( 'Security Check Failed', 'proof-of-work-firewall' ),
                 array( 'back_link' => true )
             );
         }
@@ -246,7 +246,7 @@ class PoW_Captcha_Form_Protection {
      */
     public function verify_registration( WP_Error $errors, string $login, string $email ): WP_Error {
         if ( ! $this->verify_from_post() ) {
-            $errors->add( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-captcha' ) );
+            $errors->add( 'pow_firewall_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-firewall' ) );
         }
 
         return $errors;
@@ -262,7 +262,7 @@ class PoW_Captcha_Form_Protection {
      */
     public function verify_woocommerce_login( WP_Error $errors, string $username, string $password ): WP_Error {
         if ( ! $this->verify_from_post() ) {
-            $errors->add( 'pow_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-captcha' ) );
+            $errors->add( 'pow_firewall_failed', __( 'Security check failed. Please go back and try again.', 'proof-of-work-firewall' ) );
         }
 
         return $errors;

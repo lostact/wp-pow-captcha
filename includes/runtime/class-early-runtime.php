@@ -11,8 +11,8 @@
 // escape() method and intentionally emits a self-contained bootstrap page.
 // phpcs:disable WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet, WordPress.WP.EnqueuedResources.NonEnqueuedScript, WordPress.Security.EscapeOutput.OutputNotEscaped
 
-if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
-    final class PoW_Captcha_Early_Runtime {
+if ( ! class_exists( 'PoW_Firewall_Early_Runtime', false ) ) {
+    final class PoW_Firewall_Early_Runtime {
 
         /** Current challenge protocol version. */
         private const VERSION = 3;
@@ -53,25 +53,25 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
             $expiry = self::clamp( isset( $config['expiry_time'] ) ? (int) $config['expiry_time'] : 300, 30, 3600 );
             $ip     = self::client_ip( isset( $config['trusted_proxy_ranges'] ) && is_array( $config['trusted_proxy_ranges'] ) ? $config['trusted_proxy_ranges'] : array() );
 
-            $clearance_cookie = filter_input( INPUT_COOKIE, 'pow_cleared', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
+            $clearance_cookie = filter_input( INPUT_COOKIE, 'pow_firewall_cleared', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
             if ( is_string( $clearance_cookie ) && self::valid_clearance( $clearance_cookie, $secret, $expiry, $ip ) ) {
                 self::mark_passed();
                 return;
             }
 
             $solution_error = false;
-            $solution_cookie = filter_input( INPUT_COOKIE, 'pow_solution', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
+            $solution_cookie = filter_input( INPUT_COOKIE, 'pow_firewall_solution', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
             if ( is_string( $solution_cookie ) ) {
                 $solution_error = true;
                 $cookie         = $solution_cookie;
-                self::delete_cookie( 'pow_solution' );
-                unset( $_COOKIE['pow_solution'] );
+                self::delete_cookie( 'pow_firewall_solution' );
+                unset( $_COOKIE['pow_firewall_solution'] );
 
                 $solved = self::verify_solution_cookie( $cookie, $secret, $ip );
                 if ( false !== $solved ) {
                     $clearance = self::create_clearance( (int) $solved['expires'], $secret, $ip );
-                    self::set_cookie( 'pow_cleared', $clearance, (int) $solved['expires'], true );
-                    $_COOKIE['pow_cleared'] = $clearance;
+                    self::set_cookie( 'pow_firewall_cleared', $clearance, (int) $solved['expires'], true );
+                    $_COOKIE['pow_firewall_cleared'] = $clearance;
                     self::mark_passed();
                     return;
                 }
@@ -131,8 +131,8 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
 
         /** Mark a matching request as cleared for the normal plugin fallback. */
         private static function mark_passed(): void {
-            if ( ! defined( 'POW_CAPTCHA_EARLY_PASSED' ) ) {
-                define( 'POW_CAPTCHA_EARLY_PASSED', true );
+            if ( ! defined( 'POW_FIREWALL_EARLY_PASSED' ) ) {
+                define( 'POW_FIREWALL_EARLY_PASSED', true );
             }
         }
 
@@ -267,9 +267,9 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
             }
 
             $json_flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES;
-            $worker_url = $asset_url . '/pow-worker.js?ver=' . rawurlencode( $version );
-            $solver_url = $asset_url . '/pow-solver.js?ver=' . rawurlencode( $version );
-            $style_url  = $asset_url . '/pow-challenge.css?ver=' . rawurlencode( $version );
+            $worker_url = $asset_url . '/pow-firewall-worker.js?ver=' . rawurlencode( $version );
+            $solver_url = $asset_url . '/pow-firewall-solver.js?ver=' . rawurlencode( $version );
+            $style_url  = $asset_url . '/pow-firewall-challenge.css?ver=' . rawurlencode( $version );
             ?>
 <!doctype html>
 <html lang="<?php echo self::escape( $locale ); ?>" dir="<?php echo $direction; ?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -279,7 +279,7 @@ if ( ! class_exists( 'PoW_Captcha_Early_Runtime', false ) ) {
 <body><main class="pow-container" data-pow-state="solving" dir="<?php echo $direction; ?>"><div class="pow-icon">&#128274;</div><h1><?php echo self::escape( $heading ); ?></h1>
 <?php if ( $error ) : ?><div class="pow-error"><?php echo self::escape( $retry ); ?></div><?php endif; ?>
 <div class="pow-progress" role="progressbar" aria-label="<?php echo self::escape( $progress_label ); ?>" aria-busy="true" hidden><span></span></div><p id="pow-status" role="status" aria-live="polite"><?php echo self::escape( $please_wait ); ?></p><p id="pow-details" hidden><?php echo self::escape( $starting ); ?></p></main>
-<script>window.powChallenge=<?php echo json_encode( $challenge, $json_flags ); ?>;window.powExpires=<?php echo (int) $expires; ?>;window.powDifficulty=<?php echo (int) $difficulty; ?>;window.powVersion=<?php echo self::VERSION; ?>;window.powAlgorithm=<?php echo json_encode( self::ALGORITHM, $json_flags ); ?>;window.powSig=<?php echo json_encode( $signature, $json_flags ); ?>;window.powInteractionMode=<?php echo json_encode( $interaction_mode, $json_flags ); ?>;window.powDebugProgress=<?php echo $debug_progress ? 'true' : 'false'; ?>;window.powI18n=<?php echo json_encode( $frontend_strings, $json_flags ); ?>;window.powWorkerUrl=<?php echo json_encode( $worker_url, $json_flags ); ?>;</script>
+<script>window.powFirewallChallenge=<?php echo json_encode( $challenge, $json_flags ); ?>;window.powFirewallExpires=<?php echo (int) $expires; ?>;window.powFirewallDifficulty=<?php echo (int) $difficulty; ?>;window.powFirewallVersion=<?php echo self::VERSION; ?>;window.powFirewallAlgorithm=<?php echo json_encode( self::ALGORITHM, $json_flags ); ?>;window.powFirewallSig=<?php echo json_encode( $signature, $json_flags ); ?>;window.powFirewallInteractionMode=<?php echo json_encode( $interaction_mode, $json_flags ); ?>;window.powFirewallDebugProgress=<?php echo $debug_progress ? 'true' : 'false'; ?>;window.powFirewallI18n=<?php echo json_encode( $frontend_strings, $json_flags ); ?>;window.powFirewallWorkerUrl=<?php echo json_encode( $worker_url, $json_flags ); ?>;</script>
 <script src="<?php echo self::escape( $solver_url ); ?>"></script></body></html>
             <?php
             exit;

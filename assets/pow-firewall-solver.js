@@ -1,11 +1,11 @@
 /**
- * Proof of Work Captcha — browser solver controller.
+ * Proof-of-Work Firewall — browser solver controller.
  */
 (function () {
     'use strict';
 
     function translate(key, fallback) {
-        return window.powI18n && typeof window.powI18n[key] === 'string' ? window.powI18n[key] : fallback;
+        return window.powFirewallI18n && typeof window.powFirewallI18n[key] === 'string' ? window.powFirewallI18n[key] : fallback;
     }
 
     function formatNumber(value) {
@@ -103,10 +103,10 @@
     }
 
     function debugProgressEnabled() {
-        if (typeof window.powDebugProgress !== 'undefined') {
-            return window.powDebugProgress === true;
+        if (typeof window.powFirewallDebugProgress !== 'undefined') {
+            return window.powFirewallDebugProgress === true;
         }
-        return Boolean(window.powConfig && window.powConfig.debugProgress === true);
+        return Boolean(window.powFirewallConfig && window.powFirewallConfig.debugProgress === true);
     }
 
     function configureProgressDetails(details) {
@@ -182,7 +182,7 @@
     }
 
     function runChallengePage() {
-        if (typeof window.powChallenge === 'undefined') {
+        if (typeof window.powFirewallChallenge === 'undefined') {
             return false;
         }
 
@@ -190,9 +190,9 @@
         var status = document.getElementById('pow-status');
         var details = document.getElementById('pow-details');
         configureProgressDetails(details);
-        var workerUrl = typeof window.powWorkerUrl !== 'undefined'
-            ? window.powWorkerUrl
-            : (window.powConfig ? window.powConfig.workerUrl : null);
+        var workerUrl = typeof window.powFirewallWorkerUrl !== 'undefined'
+            ? window.powFirewallWorkerUrl
+            : (window.powFirewallConfig ? window.powFirewallConfig.workerUrl : null);
 
         if (!workerUrl) {
             if (status) {
@@ -202,7 +202,7 @@
             return true;
         }
 
-        waitForInteraction(container, window.powInteractionMode, status, details, function () {
+        waitForInteraction(container, window.powFirewallInteractionMode, status, details, function () {
             showProgress(container);
             setState(container, 'solving');
             if (status) {
@@ -211,21 +211,21 @@
             if (details) {
                 details.textContent = translate('startingWorker', 'Starting secure worker…');
             }
-            solve(workerUrl, window.powChallenge, Number(window.powDifficulty), Number(window.powVersion || 1), {
+            solve(workerUrl, window.powFirewallChallenge, Number(window.powFirewallDifficulty), Number(window.powFirewallVersion || 1), {
                 onProgress: function (data) {
                     updateTelemetry(status, details, data);
                 },
                 onSolve: function (data) {
                     var value = [
-                        window.powChallenge,
-                        window.powExpires,
-                        window.powDifficulty,
-                        window.powVersion || 1,
-                        window.powAlgorithm || 'sha256',
-                        window.powSig,
+                        window.powFirewallChallenge,
+                        window.powFirewallExpires,
+                        window.powFirewallDifficulty,
+                        window.powFirewallVersion || 1,
+                        window.powFirewallAlgorithm || 'sha256',
+                        window.powFirewallSig,
                         data.solution
                     ].join(':');
-                    setCookie('pow_solution', value, 60);
+                    setCookie('pow_firewall_solution', value, 60);
                     setState(container, 'solved');
                     if (status) {
                         status.textContent = translate('completeRedirecting', 'Security check complete. Redirecting…');
@@ -248,12 +248,12 @@
 
     function populateChallengeFields(element, challenge) {
         var fields = {
-            '_pow_challenge': challenge.challenge,
-            '_pow_expires': challenge.expires,
-            '_pow_difficulty': challenge.difficulty,
-            '_pow_version': challenge.version,
-            '_pow_algorithm': challenge.algorithm,
-            '_pow_sig': challenge.signature
+            '_pow_firewall_challenge': challenge.challenge,
+            '_pow_firewall_expires': challenge.expires,
+            '_pow_firewall_difficulty': challenge.difficulty,
+            '_pow_firewall_version': challenge.version,
+            '_pow_firewall_algorithm': challenge.algorithm,
+            '_pow_firewall_sig': challenge.signature
         };
 
         Object.keys(fields).forEach(function (name) {
@@ -265,7 +265,7 @@
     }
 
     function runFormCaptcha(element, workerUrl, challenge) {
-        var solutionField = element.querySelector('input[name="_pow_solution"]');
+        var solutionField = element.querySelector('input[name="_pow_firewall_firewall_solution"]');
         var status = element.querySelector('.pow-status');
         var details = element.querySelector('.pow-details');
         configureProgressDetails(details);
@@ -316,7 +316,7 @@
         var status = element.querySelector('.pow-status');
         var details = element.querySelector('.pow-details');
         var separator = challengeUrl.indexOf('?') === -1 ? '?' : '&';
-        var url = challengeUrl + separator + '_pow_cache_bust=' + encodeURIComponent(Date.now() + '-' + Math.random());
+        var url = challengeUrl + separator + '_pow_firewall_cache_bust=' + encodeURIComponent(Date.now() + '-' + Math.random());
 
         setState(element, 'loading');
         if (status) {
@@ -357,13 +357,13 @@
             return;
         }
 
-        var captchas = document.querySelectorAll('.pow-captcha');
+        var captchas = document.querySelectorAll('.pow-firewall');
         if (!captchas.length) {
             return;
         }
 
-        var workerUrl = window.powConfig ? window.powConfig.workerUrl : null;
-        var challengeUrl = window.powConfig ? window.powConfig.challengeUrl : null;
+        var workerUrl = window.powFirewallConfig ? window.powFirewallConfig.workerUrl : null;
+        var challengeUrl = window.powFirewallConfig ? window.powFirewallConfig.challengeUrl : null;
         if (!workerUrl || !challengeUrl) {
             captchas.forEach(function (captcha) {
                 setState(captcha, 'error');
@@ -379,7 +379,7 @@
             configureProgressDetails(captcha.querySelector('.pow-details'));
             waitForInteraction(
                 captcha,
-                window.powConfig ? window.powConfig.interactionMode : 'automatic',
+                window.powFirewallConfig ? window.powFirewallConfig.interactionMode : 'automatic',
                 captcha.querySelector('.pow-status'),
                 captcha.querySelector('.pow-details'),
                 function () { requestFormChallenge(captcha, workerUrl, challengeUrl); }
@@ -388,8 +388,8 @@
 
         document.addEventListener('submit', function (event) {
             var form = event.target;
-            var captcha = form && form.querySelector ? form.querySelector('.pow-captcha') : null;
-            var solution = captcha ? captcha.querySelector('input[name="_pow_solution"]') : null;
+            var captcha = form && form.querySelector ? form.querySelector('.pow-firewall') : null;
+            var solution = captcha ? captcha.querySelector('input[name="_pow_firewall_firewall_solution"]') : null;
             if (!captcha || !solution || solution.value !== '') {
                 return;
             }
